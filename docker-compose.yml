@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: aiportfolio-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ai_portfolio_dev
+      POSTGRES_USER: ai_portfolio_user
+      POSTGRES_PASSWORD: devpassword123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer
+    container_name: aiportfolio-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+volumes:
+  postgres_data:
