@@ -6,9 +6,9 @@ services:
     container_name: aiportfolio-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ai_portfolio_dev
-      POSTGRES_USER: ai_portfolio_user
-      POSTGRES_PASSWORD: devpassword123
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
