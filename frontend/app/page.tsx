@@ -3,9 +3,25 @@
 import Link from "next/link";
 import { useEffect, useState, FormEvent } from "react";
 
+type ContextChunk = {
+  id: number;
+  source_type: string;
+  title: string;
+  section_title?: string | null;
+  roadmap_item_title?: string | null;
+  tags?: string | null;
+  document_title?: string | null;
+  document_filename?: string | null;
+  source_label?: string | null;
+  content: string;
+};
+
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
+  confidence?: number | null;
+  status?: string | null; // retrieval_debug.status
+  contextUsed?: ContextChunk[];
 };
 
 export default function Homepage() {
@@ -14,6 +30,11 @@ export default function Homepage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // which assistant messages have context expanded
+  const [expandedContexts, setExpandedContexts] = useState<
+    Record<number, boolean>
+  >({});
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -45,9 +66,7 @@ export default function Homepage() {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/ai/chat/`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ question }),
         }
       );
@@ -58,9 +77,13 @@ export default function Homepage() {
       }
 
       const data = await res.json();
+
       const assistantMessage: ChatMessage = {
         role: "assistant",
         content: data.answer,
+        confidence: data.confidence ?? null,
+        status: data.retrieval_debug?.status ?? null,
+        contextUsed: (data.context_used || []) as ContextChunk[],
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -71,6 +94,13 @@ export default function Homepage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleContext = (index: number) => {
+    setExpandedContexts((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
   };
 
   return (
@@ -114,30 +144,138 @@ export default function Homepage() {
         {error && <p style={{ color: "red" }}>{error}</p>}
 
         <div>
-          {messages.map((msg, idx) => (
-            <div
-              key={idx}
-              style={{
-                marginBottom: "0.75rem",
-                textAlign: msg.role === "user" ? "right" : "left",
-              }}
-            >
+          {messages.map((msg, idx) => {
+            const isAssistant = msg.role === "assistant";
+            const isLowConfidence =
+              isAssistant &&
+              (msg.status === "low_confidence" ||
+                msg.status === "very_low_confidence" ||
+                (typeof msg.confidence === "number" &&
+                  msg.confidence < 0.4));
+
+            const hasContext =
+              isAssistant && msg.contextUsed && msg.contextUsed.length > 0;
+            const isExpanded = expandedContexts[idx] ?? false;
+
+            return (
               <div
+                key={idx}
                 style={{
-                  display: "inline-block",
-                  padding: "0.5rem 0.75rem",
-                  borderRadius: "8px",
-                  background:
-                    msg.role === "user" ? "#444" : "rgba(255, 255, 255, 0.05)",
+                  marginBottom: "0.75rem",
+                  textAlign: msg.role === "user" ? "right" : "left",
                 }}
               >
-                <strong>
-                  {msg.role === "user" ? "You: " : "AI: "}
-                </strong>
-                <span>{msg.content}</span>
+                {isAssistant && isLowConfidence && (
+                  <div
+                    style={{
+                      display: "inline-block",
+                      padding: "0.4rem 0.6rem",
+                      marginBottom: "0.3rem",
+                      borderRadius: "6px",
+                      border: "1px solid #f2c14f",
+                      backgroundColor: "#fff8e1",
+                      fontSize: "0.85rem",
+                      color: "#7a5b00",
+                    }}
+                  >
+                    ⚠️ Low confidence answer — based on weak matches in your
+                    notes. It may be incomplete or uncertain.
+                    {typeof msg.confidence === "number" && (
+                      <span style={{ marginLeft: "0.5rem", opacity: 0.8 }}>
+                        (score: {msg.confidence.toFixed(2)})
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: "inline-block",
+                    padding: "0.5rem 0.75rem",
+                    borderRadius: "8px",
+                    background:
+                      msg.role === "user"
+                        ? "#444"
+                        : "rgba(255, 255, 255, 0.05)",
+                  }}
+                >
+                  <strong>{msg.role === "user" ? "You: " : "AI: "}</strong>
+                  <span>{msg.content}</span>
+                </div>
+
+                {isAssistant && hasContext && (
+                  <div
+                    style={{
+                      marginTop: "0.35rem",
+                      textAlign: "left",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleContext(idx)}
+                      style={{
+                        fontSize: "0.8rem",
+                        padding: "0.25rem 0.5rem",
+                        borderRadius: "4px",
+                        border: "1px solid #555",
+                        backgroundColor: "#222",
+                        color: "#eee",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {isExpanded
+                        ? "Hide sources"
+                        : `Show sources (${msg.contextUsed!.length})`}
+                    </button>
+
+                    {isExpanded && (
+                      <div
+                        style={{
+                          marginTop: "0.5rem",
+                          fontSize: "0.85rem",
+                          borderLeft: "2px solid #555",
+                          paddingLeft: "0.75rem",
+                        }}
+                      >
+                        {msg.contextUsed!.map((chunk, cIdx) => (
+                          <div
+                            key={chunk.id ?? cIdx}
+                            style={{ marginBottom: "0.5rem" }}
+                          >
+                            <div style={{ fontWeight: 600 }}>
+                              [Chunk {cIdx + 1}] {chunk.title}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "0.8rem",
+                                opacity: 0.8,
+                                marginBottom: "0.2rem",
+                              }}
+                            >
+                              {chunk.source_label
+                                ? chunk.source_label
+                                : chunk.source_type}
+                              {chunk.section_title && (
+                                <> · Section: {chunk.section_title}</>
+                              )}
+                              {chunk.roadmap_item_title && (
+                                <> · Item: {chunk.roadmap_item_title}</>
+                              )}
+                            </div>
+                            <div style={{ whiteSpace: "pre-wrap" }}>
+                              {chunk.content.length > 260
+                                ? chunk.content.slice(0, 260) + "…"
+                                : chunk.content}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
     </main>
