@@ -1,5 +1,6 @@
 from django.db import models
 from pgvector.django import VectorField
+import uuid
 
 class RoadmapSection(models.Model):
     title = models.CharField(max_length=200)
@@ -110,6 +111,18 @@ class SiteContent(models.Model):
 
     def __str__(self):
         return self.title
+    
+class KnowledgeSource(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=255)
+    source_type = models.CharField(max_length=50, default="uploaded")  # e.g. roadmap/note/pdf/uploaded
+    original_filename = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    # optional: full_text = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.title
+
 
 class KnowledgeChunk(models.Model):
     class SourceType(models.TextChoices):
@@ -138,3 +151,20 @@ class KnowledgeChunk(models.Model):
 
     def __str__(self) -> str:
         return f"[{self.source_type}] {self.title}"
+
+class DocumentUpload(models.Model):
+    """
+    Used only as a log/trigger for ingestion via admin.
+    We do NOT store the actual file on this model.
+    """
+    title = models.CharField(max_length=255)
+    source_type = models.CharField(max_length=50, default="uploaded")
+    original_filename = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Document upload (RAG)"
+        verbose_name_plural = "Document uploads (RAG)"
+
+    def __str__(self):
+        return self.title
