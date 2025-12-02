@@ -194,7 +194,14 @@ class AIChatView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        # 4) Return answer and a bit of metadata
+        # 5) Generate follow-up questions for low confidence answers
+        follow_up_questions = []
+        if low_conf:
+            follow_up_questions = self._generate_follow_up_questions(
+                question, context_blocks, groq_client, groq_model
+            )
+
+        # 6) Return answer and a bit of metadata
         return Response(
             {
                 "answer": answer,
@@ -202,6 +209,96 @@ class AIChatView(APIView):
                 "context_used": context_blocks,
                 "confidence": debug.get("max_score"),
                 "retrieval_debug": debug,
+                "follow_up_questions": follow_up_questions,
             },
             status=status.HTTP_200_OK,
         )
+
+    def _generate_follow_up_questions(self, question, context_blocks, groq_client, groq_model):
+        """
+        Generate 3 context-aware follow-up questions to help the user refine their query.
+        """
+        if not context_blocks:
+            # No context available - ask generic clarifying questions
+            return [
+                "What specific information about Henri are you looking for?",
+                "Tell me more about what aspect of this topic interests you",
+                "What would you like to know about Henri's work or experience?"
+            ]
+
+        # Build a summary of available topics from context
+        topics = []
+        for block in context_blocks[:3]:  # Use top 3 chunks
+            if block.get('title'):
+                topics.append(block['title'])
+            if block.get('section_title'):
+                topics.append(block['section_title'])
+            if block.get('roadmap_item_title'):
+                topics.append(block['roadmap_item_title'])
+
+        # Remove duplicates while preserving order
+        unique_topics = []
+        seen = set()
+        for topic in topics:
+            if topic and topic not in seen:
+                unique_topics.append(topic)
+                seen.add(topic)
+
+        topics_str = ", ".join(unique_topics[:5]) if unique_topics else "various topics"
+
+        # Create a prompt to generate contextual follow-up questions
+        followup_prompt = f"""Based on this user question: "{question}"
+
+And these available topics in the knowledge base: {topics_str}
+
+Generate exactly 3 helpful follow-up questions that the user could ask to refine their query and get better results.
+
+Guidelines:
+- Write questions from the USER'S perspective (first person: "What did Henri study...", "Tell me about...", etc.)
+- Make questions specific to the available topics
+- Ask about different aspects (implementation vs theory, specific tools, use cases, etc.)
+- Keep questions concise (one sentence each)
+- Make them natural and conversational
+- DO NOT use second person ("Are you looking for...") - use first person or direct questions instead
+
+Examples of good phrasing:
+- "What technologies did Henri learn during his studies?"
+- "Tell me more about Henri's education background"
+- "What degree did Henri earn?"
+
+Return ONLY the 3 questions, one per line, without numbering or bullet points."""
+
+        try:
+            response = groq_client.chat.completions.create(
+                model=groq_model,
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant that generates clarifying follow-up questions."},
+                    {"role": "user", "content": followup_prompt}
+                ],
+                temperature=0.7,  # Slightly more creative for question variety
+                max_tokens=200,
+            )
+
+            # Parse the response - split by newlines and clean up
+            questions_text = response.choices[0].message.content.strip()
+            questions = [q.strip() for q in questions_text.split('\n') if q.strip()]
+
+            # Remove any numbering or bullet points
+            cleaned_questions = []
+            for q in questions:
+                # Remove common prefixes like "1.", "-", "*", etc.
+                q = q.lstrip('0123456789.-*• ')
+                if q and len(q) > 10:  # Sanity check
+                    cleaned_questions.append(q)
+
+            # Return up to 3 questions
+            return cleaned_questions[:3] if cleaned_questions else []
+
+        except Exception as e:
+            # Fallback to generic questions if generation fails
+            print(f"Failed to generate follow-up questions: {e}")
+            return [
+                f"What specifically about {unique_topics[0] if unique_topics else 'this topic'} would you like to know?",
+                "Tell me more about the implementation details",
+                "What other aspects of Henri's work interest you?"
+            ]

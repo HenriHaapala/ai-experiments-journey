@@ -105,11 +105,15 @@ def smart_retrieve(
     avg_score = sum(scores) / len(scores) if scores else 0.0
 
     # Confidence classification is only for info
+    # Thresholds adjusted based on real-world testing:
+    # - 0.25+ is generally reliable for direct matches
+    # - 0.15-0.25 is uncertain but may contain relevant info
+    # - <0.15 is very weak semantic match
     if not scores:
         status = "no_results"
-    elif max_score < 0.2:
+    elif max_score < 0.15:
         status = "very_low_confidence"
-    elif max_score < 0.4:
+    elif max_score < 0.25:
         status = "low_confidence"
     else:
         status = "ok"

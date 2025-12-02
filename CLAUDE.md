@@ -1,0 +1,277 @@
+# CLAUDE.md
+
+## Project Overview
+
+This is an AI-powered portfolio application that tracks learning journey progress through a roadmap system with RAG (Retrieval-Augmented Generation) capabilities. The project consists of a Django REST backend with PostgreSQL + pgvector for semantic search, and a Next.js frontend.
+
+## Architecture
+
+### Backend (`/backend`)
+- **Framework**: Django + Django REST Framework
+- **Database**: PostgreSQL with pgvector extension
+- **Vector Embeddings**: Cohere embed-english-v3.0 (1024 dimensions)
+- **Python Version**: Python 3.x (managed via venv)
+
+### Frontend (`/frontend`)
+- **Framework**: Next.js 16.0.5 with React 19.2.0
+- **Styling**: Tailwind CSS 4
+- **Language**: TypeScript 5
+
+### Deployment Target
+- **Infrastructure**: Cloud server deployment (future)
+- **Containerization**: Docker/containerization planned for code components
+- **Design Principle**: Keep code containerization-ready and cloud-native
+  - Use environment variables for configuration
+  - Avoid hardcoded paths or localhost references
+  - Design for horizontal scaling where applicable
+  - Separate concerns (database, backend, frontend, workers)
+
+## Key Features
+
+1. **Learning Roadmap System**
+   - Hierarchical structure: RoadmapSection → RoadmapItem → LearningEntry
+   - Track progress through ordered items
+   - Public/private learning entries
+
+2. **RAG (Retrieval-Augmented Generation)**
+   - Document upload and processing (PDF support via pypdf)
+   - Vector embeddings for semantic search
+   - Knowledge chunking for efficient retrieval
+   - Confidence scoring and hallucination reduction
+   - Smart retrieval system
+
+3. **Content Management**
+   - Site content with slug-based routing
+   - Media attachments (images, videos, links, files)
+   - Markdown content support
+
+## Database Schema
+
+### Core Models
+
+- **RoadmapSection**: Top-level categories for learning paths
+- **RoadmapItem**: Individual topics within sections
+- **LearningEntry**: Detailed notes/content for each item
+- **Media**: Associated media files for learning entries
+- **Embedding**: Vector embeddings for learning entries (legacy)
+- **KnowledgeChunk**: Unified vector storage for all content types
+  - Supports: learning_entry, roadmap_item, site_content, document
+  - Contains title, content, section metadata, and 1024-dim vector
+- **DocumentUpload**: RAG document ingestion trigger
+- **SiteContent**: General site pages
+
+### Vector Search
+The application uses pgvector for semantic similarity search across learning content, enabling AI-powered content retrieval.
+
+## Development Setup
+
+### Backend
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
+```
+
+### Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## Recent Development
+
+Based on recent commits:
+- Hallucination reduction and confidence scoring implementation
+- Smart retrieve functionality for better RAG performance
+- Document upload system for RAG knowledge base
+- Initial AI experiments and project foundation
+
+## Project Structure
+
+```
+ai-portfolio/
+├── backend/
+│   ├── portfolio/
+│   │   ├── models.py        # Django models (roadmap, embeddings, RAG)
+│   │   └── ...
+│   ├── venv/                # Python virtual environment
+│   └── requirements.txt     # Python dependencies
+├── frontend/
+│   ├── app/                 # Next.js app directory
+│   ├── node_modules/        # Node dependencies
+│   └── package.json         # Node dependencies config
+└── CLAUDE.md               # This file
+```
+
+## Working with this Project
+
+### Common Tasks
+
+1. **Adding New Learning Content**
+   - Create entries through Django admin or API
+   - Embeddings are automatically generated for RAG
+
+2. **Querying Knowledge Base**
+   - Use KnowledgeChunk model for semantic search
+   - Supports multiple source types with unified vector storage
+
+3. **Uploading Documents**
+   - Use DocumentUpload model to trigger RAG ingestion
+   - PDF documents are processed and chunked automatically
+
+### Key Files to Know
+
+- [backend/portfolio/models.py](backend/portfolio/models.py) - Core data models
+- [frontend/package.json](frontend/package.json) - Frontend dependencies
+- [backend/requirements.txt](backend/requirements.txt) - Backend dependencies
+
+## Technology Stack
+
+**Backend:**
+- Django & Django REST Framework
+- PostgreSQL with pgvector
+- Cohere embeddings API
+- pypdf for document processing
+
+**Frontend:**
+- Next.js 16 (App Router)
+- React 19
+- TypeScript 5
+- Tailwind CSS 4
+
+## Git Branch Structure
+
+- **main**: Primary development branch
+- Clean working directory (as of last status)
+
+## Notes for AI Assistants
+
+- Vector embeddings use 1024 dimensions (Cohere embed-english-v3.0)
+- KnowledgeChunk is the unified model for all vector search operations
+- The project emphasizes hallucination reduction and confidence scoring in RAG
+- Document processing happens via the admin interface (DocumentUpload)
+- All learning content supports markdown formatting
+
+## AI Assistant Guidelines
+
+### Security (CRITICAL - HIGHEST PRIORITY)
+
+**Never commit or expose sensitive information:**
+- API keys, passwords, secrets, tokens
+- Database credentials or connection strings
+- Private keys, certificates
+- Environment variables containing sensitive data
+- Always use `.env` files (never committed) for secrets
+- Verify `.gitignore` includes sensitive files before any commits
+
+**Security vulnerabilities to prevent:**
+- SQL injection (use Django ORM properly, never raw SQL with user input)
+- XSS attacks (sanitize user input, use React's built-in escaping)
+- CSRF attacks (ensure Django CSRF protection is active)
+- Command injection (never use `eval()`, avoid shell commands with user input)
+- Path traversal (validate file paths, use Django storage APIs)
+- Authentication/authorization bypasses (always check permissions)
+- Insecure dependencies (keep packages updated)
+- Rate limiting on API endpoints
+- Proper CORS configuration
+
+**Before any code changes involving security:**
+- Review for OWASP Top 10 vulnerabilities
+- Validate and sanitize all user inputs
+- Use parameterized queries
+- Implement proper authentication and authorization
+- Secure file upload handling
+
+### Code Quality
+
+**Readability:**
+- Clear, descriptive variable and function names
+- Consistent formatting (PEP 8 for Python, ESLint for TypeScript)
+- Meaningful comments for complex logic only
+- Self-documenting code preferred over excessive comments
+- Type hints in Python, proper TypeScript types
+
+**Best Practices:**
+- DRY (Don't Repeat Yourself) - extract reusable functions
+- Single Responsibility Principle
+- Proper error handling and logging
+- Unit tests for critical functionality
+- Meaningful commit messages
+- Django migrations for all model changes
+- Proper React component composition
+- Use Django's built-in features (permissions, validators, etc.)
+
+### Performance
+
+**Backend optimization:**
+- Database query optimization (select_related, prefetch_related)
+- Proper indexing on frequently queried fields
+- Pagination for large datasets
+- Caching where appropriate (Django cache framework)
+- Async views for I/O-bound operations
+- Efficient vector similarity queries
+
+**Frontend optimization:**
+- Next.js server components where possible
+- Lazy loading for heavy components
+- Image optimization (next/image)
+- Minimize bundle size
+- Proper React memoization (useMemo, useCallback)
+
+### Communication Protocol
+
+**Always keep prompts concise:**
+- Break complex tasks into smaller steps
+- After each significant step, ask: "Ready to proceed to the next part?"
+- Wait for confirmation before continuing
+- Provide clear, brief summaries of what was done
+
+**Decision-making threshold:**
+- If less than 95% certain about the approach: **ASK FIRST**
+- Questions to ask when uncertain:
+  - "Should I use approach A or B?"
+  - "This could affect X, Y, Z - how should I proceed?"
+  - "I found multiple ways to do this - which do you prefer?"
+- Never guess on important architectural decisions
+- Better to ask than to implement incorrectly
+
+**When asking questions:**
+- Present options clearly
+- Explain trade-offs
+- Recommend an approach if appropriate
+- Keep explanations brief
+
+### Example Workflow
+
+```
+✅ GOOD:
+"I'll add input validation to the API endpoint. This will:
+- Validate email format
+- Sanitize text fields
+- Check file size limits
+
+Ready to proceed?"
+
+❌ BAD:
+"I'll add a bunch of features and change the architecture and
+refactor everything and also add these 10 other things..."
+```
+
+### Uncertainty Examples
+
+**95%+ certain - Proceed:**
+- Adding a new Django model field
+- Styling changes with Tailwind
+- Bug fixes with clear solutions
+
+**Less than 95% certain - ASK:**
+- Architecture changes
+- New external dependencies
+- Database schema restructuring
+- API contract changes
+- Security-related implementations
+- Performance optimization strategies

@@ -22,6 +22,7 @@ type ChatMessage = {
   confidence?: number | null;
   status?: string | null; // retrieval_debug.status
   contextUsed?: ContextChunk[];
+  followUpQuestions?: string[];
 };
 
 export default function Homepage() {
@@ -84,6 +85,7 @@ export default function Homepage() {
         confidence: data.confidence ?? null,
         status: data.retrieval_debug?.status ?? null,
         contextUsed: (data.context_used || []) as ContextChunk[],
+        followUpQuestions: data.follow_up_questions || [],
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -101,6 +103,12 @@ export default function Homepage() {
       ...prev,
       [index]: !prev[index],
     }));
+  };
+
+  const handleFollowUpClick = (followUpQuestion: string) => {
+    setQuestion(followUpQuestion);
+    // Optionally auto-submit
+    // Or let user edit before submitting
   };
 
   return (
@@ -151,7 +159,7 @@ export default function Homepage() {
               (msg.status === "low_confidence" ||
                 msg.status === "very_low_confidence" ||
                 (typeof msg.confidence === "number" &&
-                  msg.confidence < 0.4));
+                  msg.confidence < 0.25));
 
             const hasContext =
               isAssistant && msg.contextUsed && msg.contextUsed.length > 0;
@@ -202,6 +210,48 @@ export default function Homepage() {
                   <strong>{msg.role === "user" ? "You: " : "AI: "}</strong>
                   <span>{msg.content}</span>
                 </div>
+
+                {isAssistant && msg.followUpQuestions && msg.followUpQuestions.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: "0.5rem",
+                      textAlign: "left",
+                    }}
+                  >
+                    <div style={{ fontSize: "0.85rem", marginBottom: "0.4rem", opacity: 0.9 }}>
+                      💡 You might want to ask:
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                      {msg.followUpQuestions.map((question, qIdx) => (
+                        <button
+                          key={qIdx}
+                          type="button"
+                          onClick={() => handleFollowUpClick(question)}
+                          style={{
+                            fontSize: "0.8rem",
+                            padding: "0.4rem 0.75rem",
+                            borderRadius: "16px",
+                            border: "1px solid #4a90e2",
+                            backgroundColor: "rgba(74, 144, 226, 0.1)",
+                            color: "#66b3ff",
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "rgba(74, 144, 226, 0.2)";
+                            e.currentTarget.style.borderColor = "#66b3ff";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "rgba(74, 144, 226, 0.1)";
+                            e.currentTarget.style.borderColor = "#4a90e2";
+                          }}
+                        >
+                          {question}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {isAssistant && hasContext && (
                   <div

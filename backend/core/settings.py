@@ -23,12 +23,12 @@ DOCS_ROOT = os.path.join(BASE_DIR, "docs")
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-)wrkxo5j_cp-a-3*r&nr5ashj2@qi2@s#5g7$(9!k6+zr^1tm('
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-CHANGE-THIS-IN-PRODUCTION')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
@@ -87,11 +87,11 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "ai_portfolio_dev",
-        "USER": "ai_portfolio_user",
-        "PASSWORD": "devpassword123",
-        "HOST": "localhost",
-        "PORT": "5432",
+        "NAME": os.getenv("DB_NAME", "ai_portfolio_dev"),
+        "USER": os.getenv("DB_USER", "ai_portfolio_user"),
+        "PASSWORD": os.getenv("DB_PASSWORD", ""),
+        "HOST": os.getenv("DB_HOST", "localhost"),
+        "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
 
