@@ -90,6 +90,11 @@ class AIChatView(APIView):
             )
 
             if debug["status"] == "no_results":
+                # Generate follow-up questions even when no results found
+                follow_up_questions = self._generate_follow_up_questions(
+                    question, [], groq_client, groq_model
+                )
+
                 return Response(
                     {
                         "answer": "En löytänyt mitään tähän kysymykseen nykyisestä tietokannasta.",
@@ -97,6 +102,7 @@ class AIChatView(APIView):
                         "context_used": [],
                         "confidence": 0.0,
                         "retrieval_debug": debug,
+                        "follow_up_questions": follow_up_questions,
                     },
                     status=status.HTTP_200_OK,
                 )

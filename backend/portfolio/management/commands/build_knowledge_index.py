@@ -105,7 +105,9 @@ class Command(BaseCommand):
                 continue
 
             for idx, chunk_body in enumerate(chunks, start=1):
-                text_to_embed = f"{item.title}\n\n{chunk_body}"
+                # Include section title in embedding for better semantic matching
+                section_context = f"Section: {section.title}\n" if section else ""
+                text_to_embed = f"{section_context}{item.title}\n\n{chunk_body}"
                 emb = embed_text(client, text_to_embed, model_name)
                 if emb is None:
                     self.stderr.write(
