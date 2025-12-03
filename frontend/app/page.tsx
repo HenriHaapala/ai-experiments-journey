@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState, FormEvent } from "react";
+import Navigation from "./components/layout/Navigation";
+import Footer from "./components/layout/Footer";
+import PageWrapper from "./components/layout/PageWrapper";
+import Card from "./components/ui/Card";
 
 type ContextChunk = {
   id: number;
@@ -97,146 +101,40 @@ export default function HomePage() {
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, #1a0a0a 0%, #2a1515 100%)",
-      color: "#E8E8E8",
-      fontFamily: "system-ui, -apple-system, sans-serif"
-    }}>
-      {/* Inner Container */}
-      <div style={{
-        maxWidth: "1400px",
-        margin: "0 auto",
-        background: "linear-gradient(135deg, #1a1414 0%, #2d1f1f 30%, #331a1a 70%, #281818 100%)",
-        minHeight: "100vh",
-        boxShadow: "0 0 60px rgba(150, 50, 50, 0.4)",
-        position: "relative"
-      }}>
-        {/* Navigation */}
-        <nav style={{
-          padding: "1.5rem 2rem",
-          borderBottom: "1px solid rgba(204, 0, 0, 0.3)",
-          background: "rgba(25, 15, 15, 0.9)",
-          backdropFilter: "blur(10px)",
-          position: "sticky",
-          top: 0,
-          zIndex: 100
-        }}>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
-          }}>
-          <Link href="/" style={{
-            color: "#CC0000",
-            textDecoration: "none",
-            fontSize: "1.25rem",
-            fontWeight: "bold",
-            letterSpacing: "0.05em"
-          }}>
-            HENRI HAAPALA
-          </Link>
-          <div style={{ display: "flex", gap: "2rem" }}>
-            <Link href="/" style={{ color: "#CC0000", textDecoration: "none" }}>
-              Home
-            </Link>
-            <Link href="/roadmap" style={{ color: "#E8E8E8", textDecoration: "none" }}>
-              Roadmap
-            </Link>
-            <Link href="/learning" style={{ color: "#E8E8E8", textDecoration: "none" }}>
-              Learning Log
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <PageWrapper>
+      <Navigation />
 
       {/* Hero Section with Chatbot */}
-      <section style={{
-        padding: "4rem 2rem",
-        maxWidth: "1400px",
-        margin: "0 auto"
-      }}>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "4rem",
-          alignItems: "center"
-        }}>
+      <section className="mx-auto max-w-[1400px] px-8 py-16">
+        <div className="grid grid-cols-2 items-center gap-16">
           {/* Left: Name and Title */}
           <div>
-            <h1 style={{
-              fontSize: "4rem",
-              fontWeight: "900",
-              marginBottom: "1rem",
-              background: "linear-gradient(135deg, #CC0000 0%, #FF3333 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              letterSpacing: "-0.02em",
-              lineHeight: "1.1"
-            }}>
+            <h1 className="text-gradient-red mb-4 text-[4rem] font-black leading-[1.1] tracking-tight">
               Henri Haapala
             </h1>
-            <p style={{
-              fontSize: "1.5rem",
-              color: "#808080",
-              marginBottom: "2rem",
-              fontWeight: "300"
-            }}>
+            <p className="mb-8 text-2xl font-light text-text-gray">
               AI Engineer & Full-Stack Developer
             </p>
-            <div style={{
-              width: "60px",
-              height: "3px",
-              background: "linear-gradient(90deg, #CC0000, transparent)",
-              marginBottom: "2rem"
-            }} />
-            <p style={{
-              color: "#E8E8E8",
-              lineHeight: "1.8",
-              fontSize: "1.05rem",
-              marginBottom: "1.5rem"
-            }}>
+            <div className="divider-red mb-8" />
+            <p className="mb-6 text-[1.05rem] leading-relaxed text-text-light">
               Building intelligent systems with RAG, embeddings, and LLMs.
               Passionate about semantic search, vector databases, and production AI applications.
             </p>
-            <p style={{
-              color: "#808080",
-              fontSize: "0.95rem",
-              marginBottom: "0.5rem"
-            }}>
-              Backend health: <span style={{ color: backendStatus === "ok" ? "#CC0000" : "#808080" }}>{backendStatus}</span>
+            <p className="text-[0.95rem] text-text-gray">
+              Backend health: <span className={backendStatus === "ok" ? "text-primary-red" : "text-text-gray"}>{backendStatus}</span>
             </p>
           </div>
 
           {/* Right: Chat Interface */}
-          <div style={{
-            background: "linear-gradient(135deg, rgba(204, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%)",
-            border: "1px solid rgba(204, 0, 0, 0.3)",
-            borderRadius: "8px",
-            padding: "2rem",
-            maxHeight: "500px",
-            display: "flex",
-            flexDirection: "column"
-          }}>
-            <h2 style={{
-              color: "#CC0000",
-              fontSize: "1.5rem",
-              marginBottom: "1rem",
-              fontWeight: "700"
-            }}>
+          <div className="bg-card flex max-h-[500px] flex-col rounded-lg border border-primary-red/30 p-8">
+            <h2 className="mb-4 text-2xl font-bold text-primary-red">
               Ask My AI Assistant
             </h2>
 
             {/* Chat Messages */}
-            <div style={{
-              flex: 1,
-              overflowY: "auto",
-              marginBottom: "1rem",
-              minHeight: "250px"
-            }}>
+            <div className="mb-4 min-h-[250px] flex-1 overflow-y-auto">
               {messages.length === 0 && (
-                <p style={{ color: "#808080", fontSize: "0.95rem", fontStyle: "italic" }}>
+                <p className="text-[0.95rem] italic text-text-gray">
                   Ask me anything about Henri's work, skills, or AI learning journey...
                 </p>
               )}
@@ -249,55 +147,34 @@ export default function HomePage() {
                 );
 
                 return (
-                  <div key={idx} style={{ marginBottom: "1rem" }}>
+                  <div key={idx} className="mb-4">
                     {isAssistant && isLowConfidence && (
-                      <div style={{
-                        padding: "0.5rem",
-                        marginBottom: "0.5rem",
-                        borderRadius: "4px",
-                        border: "1px solid #f2c14f",
-                        backgroundColor: "rgba(242, 193, 79, 0.1)",
-                        fontSize: "0.8rem",
-                        color: "#f2c14f"
-                      }}>
+                      <div className="mb-2 rounded border border-[#f2c14f] bg-[#f2c14f]/10 p-2 text-xs text-[#f2c14f]">
                         ⚠️ Low confidence answer
                       </div>
                     )}
-                    <div style={{
-                      padding: "0.75rem 1rem",
-                      borderRadius: "6px",
-                      background: msg.role === "user"
-                        ? "rgba(204, 0, 0, 0.2)"
-                        : "rgba(255, 255, 255, 0.05)",
-                      border: msg.role === "user"
-                        ? "1px solid rgba(204, 0, 0, 0.3)"
-                        : "1px solid rgba(255, 255, 255, 0.1)"
-                    }}>
-                      <strong style={{ color: msg.role === "user" ? "#CC0000" : "#E8E8E8" }}>
+                    <div className={`rounded-md px-4 py-3 ${
+                      msg.role === "user"
+                        ? "border border-primary-red/30 bg-primary-red/20"
+                        : "border border-white/10 bg-white/5"
+                    }`}>
+                      <strong className={msg.role === "user" ? "text-primary-red" : "text-text-light"}>
                         {msg.role === "user" ? "You: " : "AI: "}
                       </strong>
-                      <span style={{ color: "#E8E8E8" }}>{msg.content}</span>
+                      <span className="text-text-light">{msg.content}</span>
                     </div>
 
                     {isAssistant && msg.followUpQuestions && msg.followUpQuestions.length > 0 && (
-                      <div style={{ marginTop: "0.5rem" }}>
-                        <div style={{ fontSize: "0.8rem", marginBottom: "0.5rem", color: "#808080" }}>
+                      <div className="mt-2">
+                        <div className="mb-2 text-xs text-text-gray">
                           💡 You might want to ask:
                         </div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                        <div className="flex flex-wrap gap-2">
                           {msg.followUpQuestions.map((q, qIdx) => (
                             <button
                               key={qIdx}
                               onClick={() => handleFollowUpClick(q)}
-                              style={{
-                                fontSize: "0.75rem",
-                                padding: "0.4rem 0.75rem",
-                                borderRadius: "12px",
-                                border: "1px solid #CC0000",
-                                background: "rgba(204, 0, 0, 0.1)",
-                                color: "#CC0000",
-                                cursor: "pointer"
-                              }}
+                              className="cursor-pointer rounded-xl border border-primary-red bg-primary-red/10 px-3 py-2 text-xs text-primary-red hover:bg-primary-red/20"
                             >
                               {q}
                             </button>
@@ -312,142 +189,87 @@ export default function HomePage() {
 
             {/* Chat Input */}
             <form onSubmit={handleSubmit}>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
+              <div className="flex gap-2">
                 <input
                   type="text"
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   placeholder="Ask about Henri's experience..."
-                  style={{
-                    flex: 1,
-                    padding: "0.75rem",
-                    background: "rgba(0, 0, 0, 0.5)",
-                    border: "1px solid rgba(204, 0, 0, 0.3)",
-                    borderRadius: "4px",
-                    color: "#E8E8E8",
-                    fontSize: "0.95rem"
-                  }}
+                  className="flex-1 rounded border border-primary-red/30 bg-black/50 px-3 py-3 text-[0.95rem] text-text-light focus:outline-none focus:ring-2 focus:ring-primary-red"
                 />
                 <button
                   type="submit"
                   disabled={loading}
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    background: "linear-gradient(135deg, #CC0000 0%, #8B0000 100%)",
-                    color: "#E8E8E8",
-                    border: "1px solid #CC0000",
-                    borderRadius: "4px",
-                    fontWeight: "600",
-                    cursor: loading ? "not-allowed" : "pointer",
-                    opacity: loading ? 0.6 : 1
-                  }}
+                  className="cursor-pointer rounded border border-primary-red bg-gradient-to-br from-primary-red to-dark-red px-6 py-3 font-semibold text-text-light transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? "..." : "Ask"}
                 </button>
               </div>
-              {error && <p style={{ color: "#f2c14f", fontSize: "0.85rem", marginTop: "0.5rem" }}>{error}</p>}
+              {error && <p className="mt-2 text-sm text-[#f2c14f]">{error}</p>}
             </form>
           </div>
         </div>
       </section>
 
       {/* Bio Section */}
-      <section style={{
-        padding: "4rem 2rem",
-        maxWidth: "1400px",
-        margin: "0 auto"
-      }}>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "4rem",
-          alignItems: "start"
-        }}>
+      <section className="mx-auto max-w-[1400px] px-8 py-16">
+        <div className="grid grid-cols-2 items-start gap-16">
           {/* Left Column */}
           <div>
-            <div style={{
-              background: "linear-gradient(135deg, rgba(204, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%)",
-              border: "1px solid rgba(204, 0, 0, 0.3)",
-              borderRadius: "8px",
-              padding: "2rem",
-              marginBottom: "2rem"
-            }}>
-              <h2 style={{ color: "#CC0000", fontSize: "1.5rem", marginBottom: "1.5rem", fontWeight: "700" }}>
+            <Card className="mb-8">
+              <h2 className="mb-6 text-2xl font-bold text-primary-red">
                 About Me
               </h2>
-              <p style={{ color: "#E8E8E8", lineHeight: "1.8", marginBottom: "1rem" }}>
+              <p className="mb-4 leading-relaxed text-text-light">
                 I'm an AI engineer passionate about building intelligent systems that solve real-world problems.
                 My focus is on RAG systems, embeddings, vector databases, and LLM applications.
               </p>
-              <p style={{ color: "#E8E8E8", lineHeight: "1.8" }}>
+              <p className="leading-relaxed text-text-light">
                 Currently building production-grade AI applications with Django, Next.js, and modern AI tools.
                 I specialize in retrieval-augmented generation, semantic search, and full-stack development.
               </p>
-            </div>
+            </Card>
 
-            <div style={{
-              background: "linear-gradient(135deg, rgba(204, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%)",
-              border: "1px solid rgba(204, 0, 0, 0.3)",
-              borderRadius: "8px",
-              padding: "2rem"
-            }}>
-              <h3 style={{ color: "#CC0000", fontSize: "1.25rem", marginBottom: "1.5rem", fontWeight: "700" }}>
+            <Card>
+              <h3 className="mb-6 text-xl font-bold text-primary-red">
                 Core Skills
               </h3>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
+              <div className="flex flex-wrap gap-3">
                 {["Python", "Django", "Next.js", "React", "TypeScript", "PostgreSQL", "pgvector",
                   "RAG Systems", "LLM Integration", "Cohere", "Groq", "Vector Search", "Full-Stack Development"]
                   .map((skill) => (
-                    <span key={skill} style={{
-                      padding: "0.5rem 1rem",
-                      background: "rgba(204, 0, 0, 0.2)",
-                      border: "1px solid rgba(204, 0, 0, 0.4)",
-                      borderRadius: "4px",
-                      fontSize: "0.875rem",
-                      color: "#E8E8E8"
-                    }}>
+                    <span key={skill} className="rounded border border-primary-red/40 bg-primary-red/20 px-4 py-2 text-sm text-text-light">
                       {skill}
                     </span>
                   ))}
               </div>
-            </div>
+            </Card>
           </div>
 
           {/* Right Column */}
           <div>
-            <div style={{
-              background: "linear-gradient(135deg, rgba(204, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%)",
-              border: "1px solid rgba(204, 0, 0, 0.3)",
-              borderRadius: "8px",
-              padding: "2rem",
-              marginBottom: "2rem"
-            }}>
-              <h3 style={{ color: "#CC0000", fontSize: "1.25rem", marginBottom: "1.5rem", fontWeight: "700" }}>
+            <Card className="mb-8">
+              <h3 className="mb-6 text-xl font-bold text-primary-red">
                 Education
               </h3>
               <div>
-                <h4 style={{ color: "#E8E8E8", fontSize: "1.1rem", marginBottom: "0.5rem" }}>
+                <h4 className="mb-2 text-lg text-text-light">
                   Bachelor of Business Administration (BBA)
                 </h4>
-                <p style={{ color: "#808080", fontSize: "0.95rem", marginBottom: "0.25rem" }}>
+                <p className="mb-1 text-[0.95rem] text-text-gray">
                   Oulu University of Applied Sciences
                 </p>
-                <p style={{ color: "#808080", fontSize: "0.875rem" }}>
+                <p className="text-sm text-text-gray">
                   Specialization: Web Application Development
                 </p>
               </div>
-            </div>
+            </Card>
 
-            <div style={{
-              background: "linear-gradient(135deg, rgba(204, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%)",
-              border: "1px solid rgba(204, 0, 0, 0.3)",
-              borderRadius: "8px",
-              padding: "2rem"
-            }}>
-              <h3 style={{ color: "#CC0000", fontSize: "1.25rem", marginBottom: "1.5rem", fontWeight: "700" }}>
+            <Card>
+              <h3 className="mb-6 text-xl font-bold text-primary-red">
                 Current Focus
               </h3>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              <ul className="m-0 list-none p-0">
                 {[
                   "Building production RAG systems with confidence scoring",
                   "Semantic search with pgvector and Cohere embeddings",
@@ -455,77 +277,38 @@ export default function HomePage() {
                   "Full-stack development with Django + Next.js",
                   "Following AI Career Roadmap 2025 (10 sections)"
                 ].map((item, idx) => (
-                  <li key={idx} style={{
-                    padding: "0.75rem 0",
-                    borderBottom: idx < 4 ? "1px solid rgba(204, 0, 0, 0.2)" : "none",
-                    color: "#E8E8E8",
-                    fontSize: "0.95rem",
-                    lineHeight: "1.6"
-                  }}>
-                    <span style={{ color: "#CC0000", marginRight: "0.5rem" }}>▸</span>
+                  <li key={idx} className={`py-3 text-[0.95rem] leading-normal text-text-light ${idx < 4 ? "border-b border-primary-red/20" : ""}`}>
+                    <span className="mr-2 text-primary-red">▸</span>
                     {item}
                   </li>
                 ))}
               </ul>
-            </div>
+            </Card>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section style={{
-        padding: "4rem 2rem",
-        textAlign: "center",
-        background: "linear-gradient(180deg, transparent 0%, rgba(204, 0, 0, 0.05) 100%)"
-      }}>
-        <div style={{ maxWidth: "600px", margin: "0 auto" }}>
-          <h2 style={{ color: "#CC0000", fontSize: "2rem", marginBottom: "1rem", fontWeight: "700" }}>
+      <section className="bg-gradient-to-b from-transparent to-primary-red/5 px-8 py-16 text-center">
+        <div className="mx-auto max-w-[600px]">
+          <h2 className="mb-4 text-[2rem] font-bold text-primary-red">
             Explore My Work
           </h2>
-          <p style={{ color: "#808080", marginBottom: "2rem", lineHeight: "1.6" }}>
+          <p className="mb-8 leading-relaxed text-text-gray">
             Check out my AI learning roadmap or explore my learning log to see my projects and journey.
           </p>
-          <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
-            <Link href="/roadmap" style={{
-              display: "inline-block",
-              padding: "0.75rem 2rem",
-              background: "linear-gradient(135deg, #CC0000 0%, #8B0000 100%)",
-              color: "#E8E8E8",
-              textDecoration: "none",
-              borderRadius: "4px",
-              fontWeight: "600",
-              border: "1px solid #CC0000"
-            }}>
+          <div className="flex justify-center gap-4">
+            <Link href="/roadmap" className="inline-block rounded border border-primary-red bg-gradient-to-br from-primary-red to-dark-red px-8 py-3 font-semibold text-text-light no-underline">
               View Roadmap
             </Link>
-            <Link href="/learning" style={{
-              display: "inline-block",
-              padding: "0.75rem 2rem",
-              background: "transparent",
-              color: "#CC0000",
-              textDecoration: "none",
-              borderRadius: "4px",
-              fontWeight: "600",
-              border: "1px solid #CC0000"
-            }}>
+            <Link href="/learning" className="inline-block rounded border border-primary-red bg-transparent px-8 py-3 font-semibold text-primary-red no-underline hover:bg-primary-red/10">
               Learning Log
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer style={{
-        padding: "2rem",
-        textAlign: "center",
-        borderTop: "1px solid rgba(204, 0, 0, 0.3)",
-        background: "rgba(0, 0, 0, 0.8)"
-      }}>
-        <p style={{ color: "#808080", fontSize: "0.875rem" }}>
-          © 2025 Henri Haapala. Built with Django, Next.js, and AI.
-        </p>
-      </footer>
-      </div>
-    </div>
+      <Footer />
+    </PageWrapper>
   );
 }

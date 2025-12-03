@@ -14,7 +14,7 @@ This is an AI-powered portfolio application that tracks learning journey progres
 
 ### Frontend (`/frontend`)
 - **Framework**: Next.js 16.0.5 with React 19.2.0
-- **Styling**: SCSS (Sass) for component-level styling, Tailwind CSS 4 for utility classes
+- **Styling**: Tailwind CSS 4 (primary styling approach)
 - **Language**: TypeScript 5
 - **Component Architecture**: Modular, reusable components with clear separation of concerns
 
@@ -297,13 +297,37 @@ refactor everything and also add these 10 other things..."
 - **Composition**: Build complex UIs by composing smaller, focused components
 - **File Structure**: Group related components in feature-based directories
 
-**Styling with SCSS:**
-- Use SCSS modules for component-specific styles (`ComponentName.module.scss`)
-- Leverage SCSS features: variables, mixins, nesting, functions
-- Keep styles scoped to components (avoid global styles unless necessary)
-- Use Tailwind for utility classes, SCSS for complex component styling
-- Organize SCSS: variables → mixins → base styles → modifiers
-- Follow BEM or similar naming convention for CSS classes
+**Styling with Tailwind CSS:**
+- Use Tailwind utilities as the primary styling approach (per Next.js recommendations)
+- Global styles for Tailwind base (in `app/globals.css`)
+- Custom design tokens defined in `@theme inline` directive in globals.css
+- Complex gradients and patterns in `@layer utilities` for reusability
+- Use CSS Modules only for truly custom scoped styles (rare cases)
+- Follow Next.js official styling recommendations: Tailwind first, CSS Modules when needed
+- Organize styles: global → Tailwind utilities → component-specific
+
+**Custom Utilities Available:**
+- `.bg-page-outer`, `.bg-page-inner` - Page gradient backgrounds
+- `.bg-card` - Card gradient background
+- `.text-gradient-red` - Gradient text effect with webkit support
+- `.shadow-red-glow` - Red glow box shadow
+- `.divider-red` - Red gradient divider line
+- `.bg-radial-red` - Radial gradient with red center
+
+**Tailwind Color Tokens:**
+- `text-primary-red` → #CC0000
+- `text-light-red` → #FF3333
+- `text-dark-red` → #8B0000
+- `text-text-light` → #E8E8E8
+- `text-text-gray` → #808080
+- `bg-bg-nav` → rgb(25 15 15 / 0.9)
+
+**Common Tailwind Patterns:**
+- Flex layouts: `flex items-center justify-between gap-4`
+- Grid layouts: `grid grid-cols-2 gap-16`
+- Transitions: `transition-all duration-200`
+- Hover effects: `hover:-translate-y-0.5 hover:border-primary-red/50`
+- Focus states: `focus:outline-none focus:ring-2 focus:ring-primary-red`
 
 **Naming Conventions:**
 - **Components**: PascalCase (`UserProfile.tsx`, `ChatMessage.tsx`)
@@ -312,7 +336,7 @@ refactor everything and also add these 10 other things..."
 - **Functions**: camelCase, verb-based (`handleSubmit`, `fetchUserData`)
 - **Constants**: UPPER_SNAKE_CASE (`API_BASE_URL`, `MAX_RETRY_COUNT`)
 - **Types/Interfaces**: PascalCase with descriptive names (`UserProfile`, `ChatMessage`)
-- **SCSS files**: ComponentName.module.scss (`ChatMessage.module.scss`)
+- **CSS Modules** (rare): ComponentName.module.css (`ChatMessage.module.css`)
 
 **Accessibility (a11y):**
 - Semantic HTML elements (`<button>`, `<nav>`, `<main>`, etc.)
@@ -358,18 +382,19 @@ refactor everything and also add these 10 other things..."
 ```
 frontend/
 ├── app/
-│   └── chat/
-│       ├── page.tsx              # Route page
-│       └── components/
-│           ├── ChatMessage.tsx
-│           ├── ChatMessage.module.scss
-│           ├── ChatInput.tsx
-│           └── ChatInput.module.scss
+│   ├── globals.css              # Tailwind config and custom utilities
+│   ├── page.tsx                 # Landing page
+│   ├── roadmap/
+│   │   └── page.tsx
+│   └── learning/
+│       └── page.tsx
 ├── components/                   # Shared components
-│   ├── Button/
-│   │   ├── Button.tsx
-│   │   └── Button.module.scss
-│   └── ...
+│   ├── layout/
+│   │   ├── Navigation.tsx       # Shared navigation
+│   │   ├── Footer.tsx           # Shared footer
+│   │   └── PageWrapper.tsx      # Page container
+│   └── ui/
+│       └── Card.tsx             # Reusable card component
 ├── hooks/                        # Custom hooks
 ├── utils/                        # Utility functions
 └── types/                        # TypeScript types

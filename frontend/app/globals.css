@@ -10,6 +10,14 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Custom color palette */
+  --color-primary-red: #CC0000;
+  --color-light-red: #FF3333;
+  --color-dark-red: #8B0000;
+  --color-text-light: #E8E8E8;
+  --color-text-gray: #808080;
+  --color-bg-nav: rgb(25 15 15 / 0.9);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,4 +31,41 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  /* Complex gradients */
+  .bg-page-outer {
+    background: linear-gradient(135deg, #1a0a0a 0%, #2a1515 100%);
+  }
+
+  .bg-page-inner {
+    background: linear-gradient(135deg, #1a1414 0%, #2d1f1f 30%, #331a1a 70%, #281818 100%);
+  }
+
+  .bg-card {
+    background: linear-gradient(135deg, rgba(204, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%);
+  }
+
+  .bg-radial-red {
+    background: radial-gradient(circle at center, rgba(204, 0, 0, 0.1) 0%, transparent 70%);
+  }
+
+  /* Gradient text with webkit support */
+  .text-gradient-red {
+    background: linear-gradient(135deg, #CC0000 0%, #FF3333 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .shadow-red-glow {
+    box-shadow: 0 0 60px rgba(150, 50, 50, 0.4);
+  }
+
+  .divider-red {
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, #CC0000, transparent);
+  }
 }
