@@ -10,9 +10,6 @@ type ContextChunk = {
   section_title?: string | null;
   roadmap_item_title?: string | null;
   tags?: string | null;
-  document_title?: string | null;
-  document_filename?: string | null;
-  source_label?: string | null;
   content: string;
 };
 
@@ -20,29 +17,23 @@ type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   confidence?: number | null;
-  status?: string | null; // retrieval_debug.status
+  status?: string | null;
   contextUsed?: ContextChunk[];
   followUpQuestions?: string[];
 };
 
-export default function Homepage() {
+export default function HomePage() {
   const [backendStatus, setBackendStatus] = useState<string>("checking…");
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // which assistant messages have context expanded
-  const [expandedContexts, setExpandedContexts] = useState<
-    Record<number, boolean>
-  >({});
+  const [expandedContexts, setExpandedContexts] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/health/`
-        );
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/health/`);
         if (!res.ok) throw new Error("Bad response");
         const data = await res.json();
         setBackendStatus(data.status || "ok");
@@ -63,14 +54,11 @@ export default function Homepage() {
     setError(null);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/ai/chat/`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question }),
-        }
-      );
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/ai/chat/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -78,7 +66,6 @@ export default function Homepage() {
       }
 
       const data = await res.json();
-
       const assistantMessage: ChatMessage = {
         role: "assistant",
         content: data.answer,
@@ -107,227 +94,438 @@ export default function Homepage() {
 
   const handleFollowUpClick = (followUpQuestion: string) => {
     setQuestion(followUpQuestion);
-    // Optionally auto-submit
-    // Or let user edit before submitting
   };
 
   return (
-    <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>Henri – AI Portfolio</h1>
-      <p>Backend health: {backendStatus}</p>
-
-      <nav style={{ marginTop: "1.5rem", marginBottom: "2rem" }}>
-        <ul>
-          <li>
-            <Link href="/roadmap">View AI Roadmap</Link>
-          </li>
-          <li>
-            <Link href="/learning">View Learning Log</Link>
-          </li>
-        </ul>
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, #1a0a0a 0%, #2a1515 100%)",
+      color: "#E8E8E8",
+      fontFamily: "system-ui, -apple-system, sans-serif"
+    }}>
+      {/* Inner Container */}
+      <div style={{
+        maxWidth: "1400px",
+        margin: "0 auto",
+        background: "linear-gradient(135deg, #1a1414 0%, #2d1f1f 30%, #331a1a 70%, #281818 100%)",
+        minHeight: "100vh",
+        boxShadow: "0 0 60px rgba(150, 50, 50, 0.4)",
+        position: "relative"
+      }}>
+        {/* Navigation */}
+        <nav style={{
+          padding: "1.5rem 2rem",
+          borderBottom: "1px solid rgba(204, 0, 0, 0.3)",
+          background: "rgba(25, 15, 15, 0.9)",
+          backdropFilter: "blur(10px)",
+          position: "sticky",
+          top: 0,
+          zIndex: 100
+        }}>
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}>
+          <Link href="/" style={{
+            color: "#CC0000",
+            textDecoration: "none",
+            fontSize: "1.25rem",
+            fontWeight: "bold",
+            letterSpacing: "0.05em"
+          }}>
+            HENRI HAAPALA
+          </Link>
+          <div style={{ display: "flex", gap: "2rem" }}>
+            <Link href="/" style={{ color: "#CC0000", textDecoration: "none" }}>
+              Home
+            </Link>
+            <Link href="/roadmap" style={{ color: "#E8E8E8", textDecoration: "none" }}>
+              Roadmap
+            </Link>
+            <Link href="/learning" style={{ color: "#E8E8E8", textDecoration: "none" }}>
+              Learning Log
+            </Link>
+          </div>
+        </div>
       </nav>
 
-      <section
-        style={{
-          border: "1px solid #333",
-          borderRadius: "8px",
-          padding: "1rem",
-          maxWidth: "700px",
-        }}
-      >
-        <h2>Ask my AI about my journey</h2>
-        <form onSubmit={handleSubmit} style={{ marginBottom: "1rem" }}>
-          <textarea
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            rows={3}
-            style={{ width: "100%", marginBottom: "0.5rem" }}
-            placeholder="Ask something like: What has Henri done so far on RAG? What kind of employee is Henri? etc."
-          />
-          <button type="submit" disabled={loading}>
-            {loading ? "Thinking..." : "Ask"}
-          </button>
-        </form>
+      {/* Hero Section with Chatbot */}
+      <section style={{
+        padding: "4rem 2rem",
+        maxWidth: "1400px",
+        margin: "0 auto"
+      }}>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "4rem",
+          alignItems: "center"
+        }}>
+          {/* Left: Name and Title */}
+          <div>
+            <h1 style={{
+              fontSize: "4rem",
+              fontWeight: "900",
+              marginBottom: "1rem",
+              background: "linear-gradient(135deg, #CC0000 0%, #FF3333 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+              letterSpacing: "-0.02em",
+              lineHeight: "1.1"
+            }}>
+              Henri Haapala
+            </h1>
+            <p style={{
+              fontSize: "1.5rem",
+              color: "#808080",
+              marginBottom: "2rem",
+              fontWeight: "300"
+            }}>
+              AI Engineer & Full-Stack Developer
+            </p>
+            <div style={{
+              width: "60px",
+              height: "3px",
+              background: "linear-gradient(90deg, #CC0000, transparent)",
+              marginBottom: "2rem"
+            }} />
+            <p style={{
+              color: "#E8E8E8",
+              lineHeight: "1.8",
+              fontSize: "1.05rem",
+              marginBottom: "1.5rem"
+            }}>
+              Building intelligent systems with RAG, embeddings, and LLMs.
+              Passionate about semantic search, vector databases, and production AI applications.
+            </p>
+            <p style={{
+              color: "#808080",
+              fontSize: "0.95rem",
+              marginBottom: "0.5rem"
+            }}>
+              Backend health: <span style={{ color: backendStatus === "ok" ? "#CC0000" : "#808080" }}>{backendStatus}</span>
+            </p>
+          </div>
 
-        {error && <p style={{ color: "red" }}>{error}</p>}
+          {/* Right: Chat Interface */}
+          <div style={{
+            background: "linear-gradient(135deg, rgba(204, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%)",
+            border: "1px solid rgba(204, 0, 0, 0.3)",
+            borderRadius: "8px",
+            padding: "2rem",
+            maxHeight: "500px",
+            display: "flex",
+            flexDirection: "column"
+          }}>
+            <h2 style={{
+              color: "#CC0000",
+              fontSize: "1.5rem",
+              marginBottom: "1rem",
+              fontWeight: "700"
+            }}>
+              Ask My AI Assistant
+            </h2>
 
-        <div>
-          {messages.map((msg, idx) => {
-            const isAssistant = msg.role === "assistant";
-            const isLowConfidence =
-              isAssistant &&
-              (msg.status === "low_confidence" ||
-                msg.status === "very_low_confidence" ||
-                (typeof msg.confidence === "number" &&
-                  msg.confidence < 0.25));
+            {/* Chat Messages */}
+            <div style={{
+              flex: 1,
+              overflowY: "auto",
+              marginBottom: "1rem",
+              minHeight: "250px"
+            }}>
+              {messages.length === 0 && (
+                <p style={{ color: "#808080", fontSize: "0.95rem", fontStyle: "italic" }}>
+                  Ask me anything about Henri's work, skills, or AI learning journey...
+                </p>
+              )}
+              {messages.map((msg, idx) => {
+                const isAssistant = msg.role === "assistant";
+                const isLowConfidence = isAssistant && (
+                  msg.status === "low_confidence" ||
+                  msg.status === "very_low_confidence" ||
+                  (typeof msg.confidence === "number" && msg.confidence < 0.25)
+                );
 
-            const hasContext =
-              isAssistant && msg.contextUsed && msg.contextUsed.length > 0;
-            const isExpanded = expandedContexts[idx] ?? false;
-
-            return (
-              <div
-                key={idx}
-                style={{
-                  marginBottom: "0.75rem",
-                  textAlign: msg.role === "user" ? "right" : "left",
-                }}
-              >
-                {isAssistant && isLowConfidence && (
-                  <div
-                    style={{
-                      display: "inline-block",
-                      padding: "0.4rem 0.6rem",
-                      marginBottom: "0.3rem",
-                      borderRadius: "6px",
-                      border: "1px solid #f2c14f",
-                      backgroundColor: "#fff8e1",
-                      fontSize: "0.85rem",
-                      color: "#7a5b00",
-                    }}
-                  >
-                    ⚠️ Low confidence answer — based on weak matches in your
-                    notes. It may be incomplete or uncertain.
-                    {typeof msg.confidence === "number" && (
-                      <span style={{ marginLeft: "0.5rem", opacity: 0.8 }}>
-                        (score: {msg.confidence.toFixed(2)})
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    display: "inline-block",
-                    padding: "0.5rem 0.75rem",
-                    borderRadius: "8px",
-                    background:
-                      msg.role === "user"
-                        ? "#444"
-                        : "rgba(255, 255, 255, 0.05)",
-                  }}
-                >
-                  <strong>{msg.role === "user" ? "You: " : "AI: "}</strong>
-                  <span>{msg.content}</span>
-                </div>
-
-                {isAssistant && msg.followUpQuestions && msg.followUpQuestions.length > 0 && (
-                  <div
-                    style={{
-                      marginTop: "0.5rem",
-                      textAlign: "left",
-                    }}
-                  >
-                    <div style={{ fontSize: "0.85rem", marginBottom: "0.4rem", opacity: 0.9 }}>
-                      💡 You might want to ask:
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                      {msg.followUpQuestions.map((question, qIdx) => (
-                        <button
-                          key={qIdx}
-                          type="button"
-                          onClick={() => handleFollowUpClick(question)}
-                          style={{
-                            fontSize: "0.8rem",
-                            padding: "0.4rem 0.75rem",
-                            borderRadius: "16px",
-                            border: "1px solid #4a90e2",
-                            backgroundColor: "rgba(74, 144, 226, 0.1)",
-                            color: "#66b3ff",
-                            cursor: "pointer",
-                            transition: "all 0.2s ease",
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = "rgba(74, 144, 226, 0.2)";
-                            e.currentTarget.style.borderColor = "#66b3ff";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = "rgba(74, 144, 226, 0.1)";
-                            e.currentTarget.style.borderColor = "#4a90e2";
-                          }}
-                        >
-                          {question}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {isAssistant && hasContext && (
-                  <div
-                    style={{
-                      marginTop: "0.35rem",
-                      textAlign: "left",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleContext(idx)}
-                      style={{
-                        fontSize: "0.8rem",
-                        padding: "0.25rem 0.5rem",
+                return (
+                  <div key={idx} style={{ marginBottom: "1rem" }}>
+                    {isAssistant && isLowConfidence && (
+                      <div style={{
+                        padding: "0.5rem",
+                        marginBottom: "0.5rem",
                         borderRadius: "4px",
-                        border: "1px solid #555",
-                        backgroundColor: "#222",
-                        color: "#eee",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {isExpanded
-                        ? "Hide sources"
-                        : `Show sources (${msg.contextUsed!.length})`}
-                    </button>
+                        border: "1px solid #f2c14f",
+                        backgroundColor: "rgba(242, 193, 79, 0.1)",
+                        fontSize: "0.8rem",
+                        color: "#f2c14f"
+                      }}>
+                        ⚠️ Low confidence answer
+                      </div>
+                    )}
+                    <div style={{
+                      padding: "0.75rem 1rem",
+                      borderRadius: "6px",
+                      background: msg.role === "user"
+                        ? "rgba(204, 0, 0, 0.2)"
+                        : "rgba(255, 255, 255, 0.05)",
+                      border: msg.role === "user"
+                        ? "1px solid rgba(204, 0, 0, 0.3)"
+                        : "1px solid rgba(255, 255, 255, 0.1)"
+                    }}>
+                      <strong style={{ color: msg.role === "user" ? "#CC0000" : "#E8E8E8" }}>
+                        {msg.role === "user" ? "You: " : "AI: "}
+                      </strong>
+                      <span style={{ color: "#E8E8E8" }}>{msg.content}</span>
+                    </div>
 
-                    {isExpanded && (
-                      <div
-                        style={{
-                          marginTop: "0.5rem",
-                          fontSize: "0.85rem",
-                          borderLeft: "2px solid #555",
-                          paddingLeft: "0.75rem",
-                        }}
-                      >
-                        {msg.contextUsed!.map((chunk, cIdx) => (
-                          <div
-                            key={chunk.id ?? cIdx}
-                            style={{ marginBottom: "0.5rem" }}
-                          >
-                            <div style={{ fontWeight: 600 }}>
-                              [Chunk {cIdx + 1}] {chunk.title}
-                            </div>
-                            <div
+                    {isAssistant && msg.followUpQuestions && msg.followUpQuestions.length > 0 && (
+                      <div style={{ marginTop: "0.5rem" }}>
+                        <div style={{ fontSize: "0.8rem", marginBottom: "0.5rem", color: "#808080" }}>
+                          💡 You might want to ask:
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                          {msg.followUpQuestions.map((q, qIdx) => (
+                            <button
+                              key={qIdx}
+                              onClick={() => handleFollowUpClick(q)}
                               style={{
-                                fontSize: "0.8rem",
-                                opacity: 0.8,
-                                marginBottom: "0.2rem",
+                                fontSize: "0.75rem",
+                                padding: "0.4rem 0.75rem",
+                                borderRadius: "12px",
+                                border: "1px solid #CC0000",
+                                background: "rgba(204, 0, 0, 0.1)",
+                                color: "#CC0000",
+                                cursor: "pointer"
                               }}
                             >
-                              {chunk.source_label
-                                ? chunk.source_label
-                                : chunk.source_type}
-                              {chunk.section_title && (
-                                <> · Section: {chunk.section_title}</>
-                              )}
-                              {chunk.roadmap_item_title && (
-                                <> · Item: {chunk.roadmap_item_title}</>
-                              )}
-                            </div>
-                            <div style={{ whiteSpace: "pre-wrap" }}>
-                              {chunk.content.length > 260
-                                ? chunk.content.slice(0, 260) + "…"
-                                : chunk.content}
-                            </div>
-                          </div>
-                        ))}
+                              {q}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
-                )}
+                );
+              })}
+            </div>
+
+            {/* Chat Input */}
+            <form onSubmit={handleSubmit}>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <input
+                  type="text"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  placeholder="Ask about Henri's experience..."
+                  style={{
+                    flex: 1,
+                    padding: "0.75rem",
+                    background: "rgba(0, 0, 0, 0.5)",
+                    border: "1px solid rgba(204, 0, 0, 0.3)",
+                    borderRadius: "4px",
+                    color: "#E8E8E8",
+                    fontSize: "0.95rem"
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    padding: "0.75rem 1.5rem",
+                    background: "linear-gradient(135deg, #CC0000 0%, #8B0000 100%)",
+                    color: "#E8E8E8",
+                    border: "1px solid #CC0000",
+                    borderRadius: "4px",
+                    fontWeight: "600",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    opacity: loading ? 0.6 : 1
+                  }}
+                >
+                  {loading ? "..." : "Ask"}
+                </button>
               </div>
-            );
-          })}
+              {error && <p style={{ color: "#f2c14f", fontSize: "0.85rem", marginTop: "0.5rem" }}>{error}</p>}
+            </form>
+          </div>
         </div>
       </section>
-    </main>
+
+      {/* Bio Section */}
+      <section style={{
+        padding: "4rem 2rem",
+        maxWidth: "1400px",
+        margin: "0 auto"
+      }}>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "4rem",
+          alignItems: "start"
+        }}>
+          {/* Left Column */}
+          <div>
+            <div style={{
+              background: "linear-gradient(135deg, rgba(204, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%)",
+              border: "1px solid rgba(204, 0, 0, 0.3)",
+              borderRadius: "8px",
+              padding: "2rem",
+              marginBottom: "2rem"
+            }}>
+              <h2 style={{ color: "#CC0000", fontSize: "1.5rem", marginBottom: "1.5rem", fontWeight: "700" }}>
+                About Me
+              </h2>
+              <p style={{ color: "#E8E8E8", lineHeight: "1.8", marginBottom: "1rem" }}>
+                I'm an AI engineer passionate about building intelligent systems that solve real-world problems.
+                My focus is on RAG systems, embeddings, vector databases, and LLM applications.
+              </p>
+              <p style={{ color: "#E8E8E8", lineHeight: "1.8" }}>
+                Currently building production-grade AI applications with Django, Next.js, and modern AI tools.
+                I specialize in retrieval-augmented generation, semantic search, and full-stack development.
+              </p>
+            </div>
+
+            <div style={{
+              background: "linear-gradient(135deg, rgba(204, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%)",
+              border: "1px solid rgba(204, 0, 0, 0.3)",
+              borderRadius: "8px",
+              padding: "2rem"
+            }}>
+              <h3 style={{ color: "#CC0000", fontSize: "1.25rem", marginBottom: "1.5rem", fontWeight: "700" }}>
+                Core Skills
+              </h3>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
+                {["Python", "Django", "Next.js", "React", "TypeScript", "PostgreSQL", "pgvector",
+                  "RAG Systems", "LLM Integration", "Cohere", "Groq", "Vector Search", "Full-Stack Development"]
+                  .map((skill) => (
+                    <span key={skill} style={{
+                      padding: "0.5rem 1rem",
+                      background: "rgba(204, 0, 0, 0.2)",
+                      border: "1px solid rgba(204, 0, 0, 0.4)",
+                      borderRadius: "4px",
+                      fontSize: "0.875rem",
+                      color: "#E8E8E8"
+                    }}>
+                      {skill}
+                    </span>
+                  ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div>
+            <div style={{
+              background: "linear-gradient(135deg, rgba(204, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%)",
+              border: "1px solid rgba(204, 0, 0, 0.3)",
+              borderRadius: "8px",
+              padding: "2rem",
+              marginBottom: "2rem"
+            }}>
+              <h3 style={{ color: "#CC0000", fontSize: "1.25rem", marginBottom: "1.5rem", fontWeight: "700" }}>
+                Education
+              </h3>
+              <div>
+                <h4 style={{ color: "#E8E8E8", fontSize: "1.1rem", marginBottom: "0.5rem" }}>
+                  Bachelor of Business Administration (BBA)
+                </h4>
+                <p style={{ color: "#808080", fontSize: "0.95rem", marginBottom: "0.25rem" }}>
+                  Oulu University of Applied Sciences
+                </p>
+                <p style={{ color: "#808080", fontSize: "0.875rem" }}>
+                  Specialization: Web Application Development
+                </p>
+              </div>
+            </div>
+
+            <div style={{
+              background: "linear-gradient(135deg, rgba(204, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%)",
+              border: "1px solid rgba(204, 0, 0, 0.3)",
+              borderRadius: "8px",
+              padding: "2rem"
+            }}>
+              <h3 style={{ color: "#CC0000", fontSize: "1.25rem", marginBottom: "1.5rem", fontWeight: "700" }}>
+                Current Focus
+              </h3>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {[
+                  "Building production RAG systems with confidence scoring",
+                  "Semantic search with pgvector and Cohere embeddings",
+                  "LLM integration for intelligent applications",
+                  "Full-stack development with Django + Next.js",
+                  "Following AI Career Roadmap 2025 (10 sections)"
+                ].map((item, idx) => (
+                  <li key={idx} style={{
+                    padding: "0.75rem 0",
+                    borderBottom: idx < 4 ? "1px solid rgba(204, 0, 0, 0.2)" : "none",
+                    color: "#E8E8E8",
+                    fontSize: "0.95rem",
+                    lineHeight: "1.6"
+                  }}>
+                    <span style={{ color: "#CC0000", marginRight: "0.5rem" }}>▸</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section style={{
+        padding: "4rem 2rem",
+        textAlign: "center",
+        background: "linear-gradient(180deg, transparent 0%, rgba(204, 0, 0, 0.05) 100%)"
+      }}>
+        <div style={{ maxWidth: "600px", margin: "0 auto" }}>
+          <h2 style={{ color: "#CC0000", fontSize: "2rem", marginBottom: "1rem", fontWeight: "700" }}>
+            Explore My Work
+          </h2>
+          <p style={{ color: "#808080", marginBottom: "2rem", lineHeight: "1.6" }}>
+            Check out my AI learning roadmap or explore my learning log to see my projects and journey.
+          </p>
+          <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
+            <Link href="/roadmap" style={{
+              display: "inline-block",
+              padding: "0.75rem 2rem",
+              background: "linear-gradient(135deg, #CC0000 0%, #8B0000 100%)",
+              color: "#E8E8E8",
+              textDecoration: "none",
+              borderRadius: "4px",
+              fontWeight: "600",
+              border: "1px solid #CC0000"
+            }}>
+              View Roadmap
+            </Link>
+            <Link href="/learning" style={{
+              display: "inline-block",
+              padding: "0.75rem 2rem",
+              background: "transparent",
+              color: "#CC0000",
+              textDecoration: "none",
+              borderRadius: "4px",
+              fontWeight: "600",
+              border: "1px solid #CC0000"
+            }}>
+              Learning Log
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer style={{
+        padding: "2rem",
+        textAlign: "center",
+        borderTop: "1px solid rgba(204, 0, 0, 0.3)",
+        background: "rgba(0, 0, 0, 0.8)"
+      }}>
+        <p style={{ color: "#808080", fontSize: "0.875rem" }}>
+          © 2025 Henri Haapala. Built with Django, Next.js, and AI.
+        </p>
+      </footer>
+      </div>
+    </div>
   );
 }

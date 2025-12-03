@@ -14,8 +14,9 @@ This is an AI-powered portfolio application that tracks learning journey progres
 
 ### Frontend (`/frontend`)
 - **Framework**: Next.js 16.0.5 with React 19.2.0
-- **Styling**: Tailwind CSS 4
+- **Styling**: SCSS (Sass) for component-level styling, Tailwind CSS 4 for utility classes
 - **Language**: TypeScript 5
+- **Component Architecture**: Modular, reusable components with clear separation of concerns
 
 ### Deployment Target
 - **Infrastructure**: Cloud server deployment (future)
@@ -221,6 +222,8 @@ ai-portfolio/
 - Image optimization (next/image)
 - Minimize bundle size
 - Proper React memoization (useMemo, useCallback)
+- Code splitting for route-based optimization
+- Optimize asset delivery (fonts, images, scripts)
 
 ### Communication Protocol
 
@@ -275,3 +278,99 @@ refactor everything and also add these 10 other things..."
 - API contract changes
 - Security-related implementations
 - Performance optimization strategies
+
+### Git Commit Protocol
+
+**CRITICAL: Always ask before committing**
+- **NEVER** commit code without explicit user approval
+- After completing work, summarize changes and ask: "Ready to commit these changes?"
+- Wait for user confirmation before running git commands
+- Provide clear commit message describing what was changed and why
+- User may want to review, test, or modify before committing
+
+### Frontend Development Standards
+
+**Component Architecture:**
+- **Size**: Keep components reasonably sized (150-300 lines max)
+- **Reusability**: Extract reusable logic into shared components when it makes sense
+- **Single Responsibility**: Each component should have one clear purpose
+- **Composition**: Build complex UIs by composing smaller, focused components
+- **File Structure**: Group related components in feature-based directories
+
+**Styling with SCSS:**
+- Use SCSS modules for component-specific styles (`ComponentName.module.scss`)
+- Leverage SCSS features: variables, mixins, nesting, functions
+- Keep styles scoped to components (avoid global styles unless necessary)
+- Use Tailwind for utility classes, SCSS for complex component styling
+- Organize SCSS: variables → mixins → base styles → modifiers
+- Follow BEM or similar naming convention for CSS classes
+
+**Naming Conventions:**
+- **Components**: PascalCase (`UserProfile.tsx`, `ChatMessage.tsx`)
+- **Files**: Match component name (`UserProfile.tsx` contains `UserProfile`)
+- **Props**: Descriptive, avoid abbreviations (`userName` not `uName`)
+- **Functions**: camelCase, verb-based (`handleSubmit`, `fetchUserData`)
+- **Constants**: UPPER_SNAKE_CASE (`API_BASE_URL`, `MAX_RETRY_COUNT`)
+- **Types/Interfaces**: PascalCase with descriptive names (`UserProfile`, `ChatMessage`)
+- **SCSS files**: ComponentName.module.scss (`ChatMessage.module.scss`)
+
+**Accessibility (a11y):**
+- Semantic HTML elements (`<button>`, `<nav>`, `<main>`, etc.)
+- ARIA labels where needed (`aria-label`, `aria-describedby`)
+- Keyboard navigation support (tab order, focus states)
+- Color contrast ratios meet WCAG AA standards (4.5:1 for text)
+- Alt text for images
+- Form labels properly associated with inputs
+- Focus indicators visible and clear
+
+**Responsive Design:**
+- Mobile-first approach (base styles for mobile, scale up)
+- Use CSS Grid and Flexbox for layouts
+- Breakpoints: mobile (default), tablet (768px), desktop (1024px), wide (1440px)
+- Test on multiple screen sizes
+- Touch-friendly targets (min 44x44px for interactive elements)
+- Responsive typography (use rem/em, not fixed px)
+
+**Performance Best Practices:**
+- **Lazy Loading**: Use `React.lazy()` and `Suspense` for route-based code splitting
+- **Image Optimization**: Always use Next.js `<Image>` component with proper sizes
+- **Memoization**: Use `useMemo` for expensive calculations, `useCallback` for callbacks passed to children
+- **Avoid Premature Optimization**: Profile first, optimize bottlenecks
+- **Bundle Analysis**: Monitor bundle size, split large dependencies
+- **Server Components**: Prefer Next.js server components for non-interactive UI
+
+**Code Quality:**
+- **TypeScript**: Strict typing, avoid `any`, use proper interfaces/types
+- **Error Handling**: Graceful error states, user-friendly messages
+- **Loading States**: Show feedback during async operations
+- **Validation**: Client-side validation for UX, server-side for security
+- **Comments**: Explain "why" not "what", document complex logic only
+- **Linting**: Follow ESLint rules, fix warnings before committing
+
+**Maintainability:**
+- **Clear Architecture**: Separate concerns (components, hooks, utils, types)
+- **Consistent Patterns**: Follow established patterns in the codebase
+- **Documentation**: README for complex features, JSDoc for public APIs
+- **Testing**: Unit tests for utilities, integration tests for critical flows
+- **Version Control**: Atomic commits, descriptive messages, feature branches
+
+**Example Component Structure:**
+```
+frontend/
+├── app/
+│   └── chat/
+│       ├── page.tsx              # Route page
+│       └── components/
+│           ├── ChatMessage.tsx
+│           ├── ChatMessage.module.scss
+│           ├── ChatInput.tsx
+│           └── ChatInput.module.scss
+├── components/                   # Shared components
+│   ├── Button/
+│   │   ├── Button.tsx
+│   │   └── Button.module.scss
+│   └── ...
+├── hooks/                        # Custom hooks
+├── utils/                        # Utility functions
+└── types/                        # TypeScript types
+```
