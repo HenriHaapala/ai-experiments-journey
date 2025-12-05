@@ -36,11 +36,15 @@ body {
 @layer utilities {
   /* Complex gradients */
   .bg-page-outer {
-    background: linear-gradient(135deg, #1a0a0a 0%, #2a1515 100%);
+    background: linear-gradient(135deg, #0a0505 0%, #150a0a 100%);
   }
 
   .bg-page-inner {
-    background: linear-gradient(135deg, #1a1414 0%, #2d1f1f 30%, #331a1a 70%, #281818 100%);
+    background: linear-gradient(135deg, #0f0808 0%, #1a0f0f 50%, #150a0a 100%);
+  }
+
+  .bg-section {
+    background: rgba(25, 15, 15, 0.6);
   }
 
   .bg-card {

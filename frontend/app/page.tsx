@@ -105,7 +105,7 @@ export default function HomePage() {
       <Navigation />
 
       {/* Hero Section with Chatbot */}
-      <section className="mx-auto max-w-[1400px] px-8 py-16">
+      <section className="bg-section mx-auto max-w-[1400px] px-8 py-16">
         <div className="grid grid-cols-2 items-center gap-16">
           {/* Left: Name and Title */}
           <div>
@@ -212,7 +212,7 @@ export default function HomePage() {
       </section>
 
       {/* Bio Section */}
-      <section className="mx-auto max-w-[1400px] px-8 py-16">
+      <section className="bg-section mx-auto max-w-[1400px] px-8 py-16">
         <div className="grid grid-cols-2 items-start gap-16">
           {/* Left Column */}
           <div>
@@ -289,7 +289,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-gradient-to-b from-transparent to-primary-red/5 px-8 py-16 text-center">
+      <section className="bg-section px-8 py-16 text-center">
         <div className="mx-auto max-w-[600px]">
           <h2 className="mb-4 text-[2rem] font-bold text-primary-red">
             Explore My Work
