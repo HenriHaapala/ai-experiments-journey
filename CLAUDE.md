@@ -18,14 +18,19 @@ This is an AI-powered portfolio application that tracks learning journey progres
 - **Language**: TypeScript 5
 - **Component Architecture**: Modular, reusable components with clear separation of concerns
 
-### Deployment Target
-- **Infrastructure**: Cloud server deployment (future)
-- **Containerization**: Docker/containerization planned for code components
-- **Design Principle**: Keep code containerization-ready and cloud-native
-  - Use environment variables for configuration
-  - Avoid hardcoded paths or localhost references
-  - Design for horizontal scaling where applicable
-  - Separate concerns (database, backend, frontend, workers)
+### Deployment
+- **Infrastructure**: Fully Dockerized with docker-compose
+- **Containerization**: ✅ Complete - All services containerized
+- **Services**:
+  - PostgreSQL 16 + pgvector (port 5432)
+  - Django Backend API (port 8000)
+  - Next.js Frontend (port 3000)
+  - Adminer DB Admin (port 8080)
+- **Design Principle**: Cloud-native and production-ready
+  - Environment variables for all configuration
+  - No hardcoded paths or localhost references
+  - Horizontal scaling ready
+  - Separated concerns with health checks
 
 ## Key Features
 
@@ -66,7 +71,33 @@ The application uses pgvector for semantic similarity search across learning con
 
 ## Development Setup
 
-### Backend
+### Docker (Recommended - Production Ready)
+```bash
+# Copy environment template
+cp .env.example .env
+# Edit .env with your API keys and secrets
+
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+```
+
+**Services available at:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000/api/health/
+- Database Admin (Adminer): http://localhost:8080
+- PostgreSQL: localhost:5432
+
+See [DOCKER_SETUP.md](DOCKER_SETUP.md) for detailed setup instructions.
+
+### Local Development (Alternative)
+
+**Backend:**
 ```bash
 cd backend
 python -m venv venv
@@ -76,7 +107,7 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-### Frontend
+**Frontend:**
 ```bash
 cd frontend
 npm install
@@ -85,27 +116,54 @@ npm run dev
 
 ## Recent Development
 
-Based on recent commits:
+### Phase 2 Complete: MCP Server (Dec 6, 2025)
+- **MCP Server Built** - Model Context Protocol server exposing 5 portfolio management tools
+- **Tool Integration** - get_roadmap, get_learning_entries, search_knowledge, add_learning_entry, get_progress_stats
+- **Django Integration** - MCP handlers using Django ORM for database access
+- **RAG-Powered Search** - Semantic search across 41 knowledge chunks with Cohere embeddings
+- **Documentation** - Complete API documentation in [backend/mcp_server/README.md](backend/mcp_server/README.md)
+
+### Phase 1 Complete: Full Stack Dockerization (Dec 5, 2025)
+- **Dockerization Complete** - Full stack containerized with docker-compose (4 services)
+- **Database Migration** - Successfully migrated to Docker postgres with pgvector
+- **Frontend Build Fix** - Next.js environment variables properly baked at build time
+- **Production Ready** - All services running with health checks and proper dependencies
+
+### Earlier Milestones
+- **Tailwind CSS Refactoring** - Converted all styles to Tailwind utilities
 - Hallucination reduction and confidence scoring implementation
 - Smart retrieve functionality for better RAG performance
 - Document upload system for RAG knowledge base
-- Initial AI experiments and project foundation
 
 ## Project Structure
 
 ```
 ai-portfolio/
 ├── backend/
+│   ├── Dockerfile           # Backend Docker configuration
+│   ├── .dockerignore        # Docker build exclusions
+│   ├── mcp_server/          # MCP Server (Phase 2)
+│   │   ├── server.py        # MCP protocol server
+│   │   ├── tools.py         # Tool definitions
+│   │   ├── handlers.py      # Tool implementations
+│   │   └── README.md        # MCP server documentation
 │   ├── portfolio/
 │   │   ├── models.py        # Django models (roadmap, embeddings, RAG)
 │   │   └── ...
-│   ├── venv/                # Python virtual environment
-│   └── requirements.txt     # Python dependencies
+│   ├── venv/                # Python virtual environment (local dev)
+│   └── requirements.txt     # Python dependencies (includes mcp>=0.9.0)
 ├── frontend/
+│   ├── Dockerfile           # Frontend Docker configuration
+│   ├── .dockerignore        # Docker build exclusions
 │   ├── app/                 # Next.js app directory
 │   ├── node_modules/        # Node dependencies
 │   └── package.json         # Node dependencies config
-└── CLAUDE.md               # This file
+├── docker-compose.yml       # Multi-service orchestration
+├── .env.example             # Environment template (safe to commit)
+├── .env                     # Actual secrets (gitignored)
+├── DOCKER_SETUP.md          # Docker setup guide
+├── DATABASE_MIGRATION.md    # Database migration guide
+└── CLAUDE.md                # This file - Project documentation
 ```
 
 ## Working with this Project
@@ -149,6 +207,36 @@ ai-portfolio/
 - **main**: Primary development branch
 - Clean working directory (as of last status)
 
+## Project Timeline
+
+### December 6, 2025 - Phase 2: MCP Server
+**Goal:** Build Model Context Protocol server for portfolio management
+- Created `backend/mcp_server/` with 4 files (server.py, tools.py, handlers.py, README.md)
+- Installed MCP SDK v1.23.1
+- Implemented 5 tools: get_roadmap, get_learning_entries, search_knowledge, add_learning_entry, get_progress_stats
+- Fixed Django settings path (`core.settings` not `backend.settings`)
+- Fixed RoadmapItem fields (uses `is_active` not `completed`)
+- All tools tested and working with live database
+- **Result:** MCP server successfully exposing portfolio data and operations
+
+### December 5, 2025 - Phase 1: Dockerization
+**Goal:** Containerize entire stack for production deployment
+- Created Dockerfiles for backend and frontend
+- Built docker-compose.yml with 4 services (postgres, backend, frontend, adminer)
+- Migrated existing database to Docker postgres (611KB backup)
+- Fixed Next.js environment variables (build-time vs runtime)
+- Removed volume mounts from frontend to use built image
+- Created `.env.example` template (security fix from `.env.docker`)
+- Updated `.gitignore` to prevent secret commits
+- **Result:** Full stack running in Docker, production-ready
+
+### Earlier Development
+- **RAG System:** Implemented retrieval-augmented generation with pgvector
+- **Frontend:** Built Next.js 16 portfolio with Tailwind CSS 4
+- **Backend:** Django 5.2.8 REST API with PostgreSQL
+- **Knowledge Base:** Document upload system with semantic search
+- **UI Refactor:** Converted all styles to Tailwind utilities
+
 ## Notes for AI Assistants
 
 - Vector embeddings use 1024 dimensions (Cohere embed-english-v3.0)
@@ -156,6 +244,7 @@ ai-portfolio/
 - The project emphasizes hallucination reduction and confidence scoring in RAG
 - Document processing happens via the admin interface (DocumentUpload)
 - All learning content supports markdown formatting
+- MCP server tools documented in [backend/mcp_server/README.md](backend/mcp_server/README.md)
 
 ## AI Assistant Guidelines
 
@@ -224,6 +313,26 @@ ai-portfolio/
 - Proper React memoization (useMemo, useCallback)
 - Code splitting for route-based optimization
 - Optimize asset delivery (fonts, images, scripts)
+
+### Future Production Optimizations
+
+**Redis Caching Strategy** (Planned Enhancement):
+- **Purpose**: Demonstrate production-grade optimization knowledge and improve performance
+- **API Response Caching**: Cache frequently accessed endpoints (roadmap data, stats)
+- **Session Caching**: Store user sessions in Redis for faster authentication
+- **Query Result Caching**: Cache expensive database queries (semantic search results)
+- **Embedding Cache**: Store frequently used embeddings to reduce API calls to Cohere
+- **Cache Invalidation**: Implement smart invalidation on data updates
+- **Implementation**: Django cache backend with Redis, django-redis package
+- **Benefits**: Reduced database load, faster response times, lower API costs, scalability
+
+**Other Optimizations**:
+- **CDN Integration**: CloudFront or similar for static asset delivery
+- **Database Connection Pooling**: PgBouncer for PostgreSQL connection management
+- **Load Balancing**: Multiple backend instances behind nginx
+- **Background Task Queue**: Celery + Redis for async document processing
+- **Monitoring**: Prometheus + Grafana for performance metrics
+- **Rate Limiting**: Redis-backed rate limiting for API endpoints
 
 ### Communication Protocol
 

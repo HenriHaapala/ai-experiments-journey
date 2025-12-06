@@ -1,18 +1,62 @@
 version: "3.9"
 
 services:
-  db:
+  postgres:
     image: pgvector/pgvector:pg16
     container_name: aiportfolio-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
+      POSTGRES_DB: ${DB_NAME:-ai_portfolio_dev}
+      POSTGRES_USER: ${DB_USER:-ai_portfolio_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ai_portfolio_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: aiportfolio-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - DB_NAME=${DB_NAME:-ai_portfolio_dev}
+      - DB_USER=${DB_USER:-ai_portfolio_user}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - COHERE_API_KEY=${COHERE_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+      - COHERE_EMBED_MODEL=embed-english-v3.0
+      - GROQ_MODEL=llama-3.3-70b-versatile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    container_name: aiportfolio-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - backend
 
   adminer:
     image: adminer
@@ -20,5 +64,8 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
+    depends_on:
+      - postgres
+
 volumes:
   postgres_data:
