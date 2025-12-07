@@ -1,0 +1,276 @@
+# Semgrep Security Rules Configuration
+# Multi-language SAST for Python (Django) and JavaScript/TypeScript
+# Docs: https://semgrep.dev/docs/
+
+rules:
+  # ============================================================================
+  # PYTHON / DJANGO SECURITY RULES
+  # ============================================================================
+
+  # SQL Injection Prevention
+  - id: django-raw-sql-injection
+    patterns:
+      - pattern-either:
+          - pattern: cursor.execute($QUERY, ...)
+          - pattern: $MODEL.objects.raw($QUERY, ...)
+          - pattern: $MODEL.objects.extra(where=[$QUERY, ...], ...)
+      - pattern-not: cursor.execute("...", ...)
+      - pattern-not: $MODEL.objects.raw("...", ...)
+    message: "Potential SQL injection. Use parameterized queries with placeholders."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-89"
+      references:
+        - https://docs.djangoproject.com/en/stable/topics/security/#sql-injection-protection
+
+  # Command Injection Prevention
+  - id: dangerous-subprocess-shell
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.$FUNC(..., shell=True, ...)
+          - pattern: os.system(...)
+          - pattern: os.popen(...)
+      - pattern-not: subprocess.$FUNC("...", shell=True)
+    message: "Avoid shell=True with user input. Use shell=False and pass command as list."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-78"
+
+  # Dangerous Code Execution
+  - id: dangerous-eval-exec
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+      - pattern: compile(..., ..., 'eval')
+    message: "Never use eval() or exec() with user input. Extreme security risk."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-95"
+
+  # Insecure Deserialization (Pickle)
+  - id: insecure-pickle
+    pattern-either:
+      - pattern: pickle.loads(...)
+      - pattern: pickle.load(...)
+      - pattern: cPickle.loads(...)
+    message: "pickle.loads() is unsafe with untrusted data. Use JSON or signed data."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      cwe: "CWE-502"
+
+  # Django Debug Mode in Production
+  - id: django-debug-enabled
+    patterns:
+      - pattern: DEBUG = True
+      - pattern-inside: |
+          import os
+          ...
+      - pattern-not-inside: |
+          if $CONDITION:
+            ...
+    message: "DEBUG should be False in production. Use environment variables."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      owasp: "A05:2021 - Security Misconfiguration"
+
+  # Hardcoded Secrets
+  - id: hardcoded-secret-key
+    patterns:
+      - pattern-either:
+          - pattern: SECRET_KEY = "..."
+          - pattern: API_KEY = "..."
+          - pattern: PASSWORD = "..."
+      - pattern-not: SECRET_KEY = os.environ.get(...)
+      - pattern-not: SECRET_KEY = os.getenv(...)
+    message: "Hardcoded secrets detected. Use environment variables."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      cwe: "CWE-798"
+
+  # Django CSRF Protection Disabled
+  - id: django-csrf-exempt
+    pattern: "@csrf_exempt"
+    message: "CSRF protection disabled. Only exempt if you have alternative protection."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      owasp: "A01:2021 - Broken Access Control"
+      cwe: "CWE-352"
+
+  # Insecure Random Number Generation
+  - id: insecure-random
+    patterns:
+      - pattern-either:
+          - pattern: random.random()
+          - pattern: random.randint(...)
+      - pattern-inside: |
+          import random
+          ...
+    message: "Use secrets module for security-sensitive randomness, not random module."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      owasp: "A02:2021 - Cryptographic Failures"
+      cwe: "CWE-338"
+    fix: "import secrets; secrets.token_urlsafe(32)"
+
+  # ============================================================================
+  # JAVASCRIPT / TYPESCRIPT SECURITY RULES
+  # ============================================================================
+
+  # XSS Prevention - Dangerous innerHTML
+  - id: dangerous-innerhtml
+    patterns:
+      - pattern-either:
+          - pattern: $EL.innerHTML = $INPUT
+          - pattern: $EL.outerHTML = $INPUT
+      - pattern-not: $EL.innerHTML = "..."
+    message: "Setting innerHTML with user input can cause XSS. Use textContent or sanitize."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-79"
+
+  # XSS Prevention - dangerouslySetInnerHTML in React
+  - id: react-dangerous-html
+    pattern: dangerouslySetInnerHTML={{__html: $INPUT}}
+    message: "dangerouslySetInnerHTML can cause XSS. Sanitize with DOMPurify or avoid."
+    languages: [javascript, typescript, tsx]
+    severity: WARNING
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-79"
+
+  # eval() Usage
+  - id: dangerous-eval-js
+    pattern: eval(...)
+    message: "eval() is extremely dangerous. Refactor to avoid it entirely."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-95"
+
+  # Insecure HTTP Requests (No HTTPS)
+  - id: insecure-http-request
+    patterns:
+      - pattern-either:
+          - pattern: fetch("http://...")
+          - pattern: axios.get("http://...")
+          - pattern: $.get("http://...")
+      - pattern-not: fetch("http://localhost...")
+      - pattern-not: fetch("http://127.0.0.1...")
+    message: "Use HTTPS for external requests, not HTTP."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      owasp: "A02:2021 - Cryptographic Failures"
+      cwe: "CWE-319"
+
+  # Hardcoded Secrets in JS/TS
+  - id: hardcoded-api-key-js
+    patterns:
+      - pattern-either:
+          - pattern: const $VAR = "..._key_..."
+          - pattern: const $VAR = "..._secret_..."
+          - pattern: const $VAR = "..._token_..."
+      - metavariable-pattern:
+          metavariable: $VAR
+          pattern-either:
+            - pattern: API_KEY
+            - pattern: apiKey
+            - pattern: SECRET
+            - pattern: TOKEN
+    message: "Hardcoded API key detected. Use environment variables (process.env)."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      cwe: "CWE-798"
+
+  # Weak Crypto - Math.random() for Security
+  - id: weak-random-js
+    patterns:
+      - pattern: Math.random()
+      - pattern-inside: |
+          function $FUNC(...) {
+            ...
+          }
+      - metavariable-regex:
+          metavariable: $FUNC
+          regex: ".*(token|secret|key|auth|session).*"
+    message: "Math.random() is not cryptographically secure. Use crypto.randomBytes()."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      owasp: "A02:2021 - Cryptographic Failures"
+      cwe: "CWE-338"
+
+  # SQL Injection in JS (if using raw SQL)
+  - id: sql-injection-js
+    patterns:
+      - pattern-either:
+          - pattern: db.query($QUERY + ...)
+          - pattern: db.execute($QUERY + ...)
+          - pattern: connection.query(`... ${$VAR} ...`)
+      - pattern-not: db.query("...", [...])
+    message: "Potential SQL injection. Use parameterized queries."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-89"
+
+  # ============================================================================
+  # BEST PRACTICES
+  # ============================================================================
+
+  # TODO/FIXME in Security-Critical Code
+  - id: todo-in-auth-code
+    patterns:
+      - pattern-either:
+          - pattern: "# TODO: ..."
+          - pattern: "# FIXME: ..."
+          - pattern: "// TODO: ..."
+          - pattern: "// FIXME: ..."
+      - pattern-inside: |
+          def $FUNC(...):
+            ...
+      - metavariable-regex:
+          metavariable: $FUNC
+          regex: ".*(auth|login|password|token|permission).*"
+    message: "TODO/FIXME in security-critical code. Resolve before production."
+    languages: [python, javascript, typescript]
+    severity: INFO
+    metadata:
+      category: "best-practice"
+
+# Paths to exclude from scanning
+exclude:
+  - "*/migrations/*"
+  - "*/node_modules/*"
+  - "*/venv/*"
+  - "*/.venv/*"
+  - "*/dist/*"
+  - "*/build/*"
+  - "*/.next/*"
+  - "*/coverage/*"
+  - "*/__pycache__/*"
+  - "*.min.js"
+  - "*.test.js"
+  - "*.test.ts"
+  - "*.test.tsx"
+  - "*.spec.js"
+  - "*.spec.ts"

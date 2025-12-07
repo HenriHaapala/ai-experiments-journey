@@ -1,0 +1,69 @@
+# Bandit Security Configuration for Django
+# Python security linter focused on common security issues
+# Docs: https://bandit.readthedocs.io/
+
+[bandit]
+# Paths to exclude from scanning
+exclude_dirs = [
+    "/venv",
+    "/.venv",
+    "/node_modules",
+    "/migrations",
+    "*/migrations/*",
+    "/tests",
+    "*/test_*.py",
+    "*_test.py",
+    "/build",
+    "/dist",
+    "/__pycache__"
+]
+
+# Test IDs to skip (with justification)
+skips = [
+    # B101: assert_used - We use assert in tests, which is fine
+    "B101",
+]
+
+# Severity level threshold (LOW, MEDIUM, HIGH)
+# Only report issues at or above this level
+level = "MEDIUM"
+
+# Confidence level threshold (LOW, MEDIUM, HIGH)
+# Only report issues at or above this confidence level
+confidence = "MEDIUM"
+
+# Specific tests to run (leave empty to run all)
+# Commented out - we want all tests except those in skips
+# tests = []
+
+# Maximum number of lines to report per file
+max_lines_per_file = 1000
+
+# ============================================================================
+# CUSTOM TEST CONFIGURATIONS
+# ============================================================================
+
+# B201: Flask debug mode - Not applicable (we use Django)
+# B301: Pickle usage - We check this but allow in specific contexts
+# B303: MD5/SHA1 usage - We allow for non-cryptographic purposes
+# B311: Random usage - We check but allow for non-security random
+# B320: XML parsing - We allow with proper configuration
+# B404-B410: Import checks - Subprocess, pickle, etc.
+# B501-B509: Weak crypto checks
+# B601-B612: Shell injection, SQL injection checks
+
+[bandit.formatters]
+# Output format: json, csv, html, screen, txt, xml, yaml
+# Default is "screen" for terminal output
+
+[bandit.plugins]
+# All plugins enabled by default
+# Plugins check for:
+# - Hardcoded passwords
+# - SQL injection
+# - Shell injection
+# - Insecure deserialization
+# - Weak cryptography
+# - Assert usage
+# - Exec/eval usage
+# - And many more...

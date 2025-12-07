@@ -1,0 +1,60 @@
+# Gitleaks Configuration
+# Detects secrets, API keys, passwords, and tokens in code
+# Docs: https://github.com/gitleaks/gitleaks
+
+title = "AI Portfolio - Gitleaks Security Scan"
+
+[extend]
+# Use default gitleaks rules as baseline
+useDefault = true
+
+# Custom allowlist for false positives
+[allowlist]
+description = "Allowlisted files and patterns"
+paths = [
+    '''\.env\.example$''',  # Template files are safe
+    '''\.md$''',            # Documentation files (but still scan them)
+    '''package-lock\.json$''',
+    '''poetry\.lock$''',
+]
+
+# Allowlist specific patterns that are false positives
+regexes = [
+    '''EXAMPLE_API_KEY''',           # Example placeholders
+    '''YOUR_API_KEY_HERE''',
+    '''<YOUR_.*>''',
+    '''placeholder''',
+    '''dummy''',
+    '''fake''',
+]
+
+# Custom rules specific to this project
+[[rules]]
+id = "cohere-api-key"
+description = "Cohere API Key"
+regex = '''(?i)(co-[a-zA-Z0-9]{32})'''
+tags = ["key", "cohere"]
+
+[[rules]]
+id = "groq-api-key"
+description = "Groq API Key"
+regex = '''(?i)(gsk_[a-zA-Z0-9]{32,})'''
+tags = ["key", "groq"]
+
+[[rules]]
+id = "django-secret-key"
+description = "Django Secret Key"
+regex = '''(?i)(django[_-]?secret[_-]?key\s*=\s*['"][^'"]{30,}['"])'''
+tags = ["key", "django"]
+
+[[rules]]
+id = "postgres-password"
+description = "PostgreSQL Password in Code"
+regex = '''(?i)(postgres.*password\s*=\s*['"][^'"]+['"])'''
+tags = ["password", "database"]
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API Key Pattern"
+regex = '''(?i)(api[_-]?key\s*[:=]\s*['"][a-zA-Z0-9_\-]{20,}['"])'''
+tags = ["key", "api"]

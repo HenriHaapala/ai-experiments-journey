@@ -6,14 +6,21 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "format": "biome format --write .",
+    "check": "biome check --write .",
+    "security:frontend": "npm audit --audit-level=moderate",
+    "security:secrets": "gitleaks detect --source . --verbose",
+    "security:sast": "semgrep --config=../.semgrep.yml --json --output=semgrep-report.json .",
+    "security:all": "npm run security:frontend && npm run security:secrets && npm run security:sast"
   },
   "dependencies": {
-    "next": "16.0.5",
+    "next": "^16.0.7",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

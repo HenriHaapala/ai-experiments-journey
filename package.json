@@ -1,0 +1,63 @@
+{
+  "name": "ai-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-powered portfolio with RAG, MCP server, and intelligent agents",
+  "scripts": {
+    "install:all": "cd frontend && npm install && cd ../agent_service && pip install -r requirements.txt && cd ../backend && pip install -r requirements.txt",
+
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && python manage.py runserver",
+    "dev:agent": "cd agent_service && uvicorn api:app --reload --port 8001",
+
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:rebuild": "docker-compose down && docker-compose build && docker-compose up -d",
+
+    "security:secrets": "gitleaks detect --source . --verbose --report-path=gitleaks-report.json",
+    "security:backend": "cd backend && bandit -r . -f json -o bandit-report.json && safety check --json --output safety-report.json",
+    "security:frontend": "cd frontend && npm audit --audit-level=moderate",
+    "security:sast": "semgrep --config=.semgrep.yml --json --output=semgrep-report.json .",
+    "security:all": "npm run security:secrets && npm run security:backend && npm run security:frontend && npm run security:sast",
+
+    "format:frontend": "cd frontend && biome format --write .",
+    "format:backend": "cd backend && black . && ruff check --fix .",
+    "format:all": "npm run format:frontend && npm run format:backend",
+
+    "lint:frontend": "cd frontend && biome check .",
+    "lint:backend": "cd backend && ruff check .",
+    "lint:all": "npm run lint:frontend && npm run lint:backend",
+
+    "test:backend": "cd backend && pytest --cov=portfolio --cov-report=html --cov-report=term",
+    "test:frontend": "cd frontend && npm test",
+    "test:agent": "cd agent_service && pytest -v",
+    "test:all": "npm run test:backend && npm run test:frontend && npm run test:agent",
+
+    "prepare": "lefthook install",
+    "hooks:install": "lefthook install",
+    "hooks:uninstall": "lefthook uninstall",
+    "hooks:run": "lefthook run pre-commit"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@evilmartians/lefthook": "^1.10.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "keywords": [
+    "portfolio",
+    "AI",
+    "RAG",
+    "MCP",
+    "LangChain",
+    "Django",
+    "Next.js",
+    "Vector Search",
+    "Semantic Search"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

@@ -53,6 +53,10 @@ frontend/.turbo/
 frontend/.cache/
 frontend/out/
 
+# Root node_modules (for Lefthook, Biome, etc.)
+node_modules/
+package-lock.json
+
 # Frontend env files (VERY IMPORTANT)
 frontend/.env
 frontend/.env.*.local
@@ -91,3 +95,18 @@ migrate-database.sh
 
 # .env.docker is a duplicate of .env.example - keep only .env.example
 .env.docker
+
+############################
+# Security Scan Reports
+############################
+gitleaks-report.json
+bandit-report.json
+safety-report.json
+semgrep-report.json
+audit-report.json
+*-report.json
+*-report.html
+coverage/
+htmlcov/
+.coverage
+*.cover

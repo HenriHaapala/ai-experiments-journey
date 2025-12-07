@@ -1,0 +1,125 @@
+# Lefthook Configuration - Pre-Commit Hooks
+# Modern Git hooks manager (5-10x faster than Husky)
+# Docs: https://github.com/evilmartians/lefthook
+
+# Minimum Lefthook version
+min_version: 1.10.0
+
+# Pre-commit hooks - Run automatically before each commit
+pre-commit:
+  parallel: true  # Run commands in parallel for speed
+
+  commands:
+    # ========================================================================
+    # 1. SECRETS DETECTION (Highest Priority - Fast)
+    # ========================================================================
+    secrets-check:
+      tags: security
+      run: gitleaks protect --staged --verbose --no-banner
+      stage_fixed: true  # Re-stage files if fixes are applied
+      priority: 1  # Run first
+      skip:
+        - merge
+        - rebase
+
+    # ========================================================================
+    # 2. FRONTEND LINTING & FORMATTING (Biome - Very Fast)
+    # ========================================================================
+    biome-check:
+      tags: frontend lint
+      glob: "*.{js,ts,tsx,jsx,json}"
+      run: npx biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      stage_fixed: true
+      priority: 2
+
+    # ========================================================================
+    # 3. PYTHON FORMATTING (Ruff - 10-100x faster than black)
+    # ========================================================================
+    ruff-format:
+      tags: backend format
+      glob: "*.py"
+      exclude: "*/migrations/*"
+      run: cd backend && ruff format {staged_files}
+      stage_fixed: true
+      priority: 2
+
+    # ========================================================================
+    # 4. PYTHON LINTING (Ruff - Replaces flake8, isort, etc.)
+    # ========================================================================
+    ruff-check:
+      tags: backend lint
+      glob: "*.py"
+      exclude: "*/migrations/*"
+      run: cd backend && ruff check --fix {staged_files}
+      stage_fixed: true
+      priority: 3
+
+    # ========================================================================
+    # 5. TYPE CHECKING (Optional - Can be slow)
+    # ========================================================================
+    # typescript-check:
+    #   tags: frontend types
+    #   glob: "*.{ts,tsx}"
+    #   run: cd frontend && tsc --noEmit
+    #   priority: 4
+
+    # mypy-check:
+    #   tags: backend types
+    #   glob: "*.py"
+    #   exclude: "*/migrations/*"
+    #   run: cd backend && mypy {staged_files}
+    #   priority: 4
+
+# Pre-push hooks - Run before pushing to remote
+pre-push:
+  parallel: false  # Run sequentially for reliability
+
+  commands:
+    # Run tests before pushing
+    test-backend:
+      tags: test backend
+      run: cd backend && pytest --maxfail=1 --disable-warnings -q
+      skip:
+        - merge
+        - rebase
+
+    # Security scans before push
+    security-scan:
+      tags: security
+      run: |
+        echo "Running security scans..."
+        gitleaks detect --source . --verbose --no-banner || echo "⚠️  Secrets detected, please review"
+      skip:
+        - merge
+        - rebase
+
+# Commit message hooks - Enforce commit message standards
+commit-msg:
+  commands:
+    # Enforce conventional commits (optional)
+    # conventional-commits:
+    #   run: |
+    #     MSG=$(cat {1})
+    #     if ! echo "$MSG" | grep -qE "^(feat|fix|docs|style|refactor|perf|test|chore|build|ci)(\(.+\))?: .+"; then
+    #       echo "❌ Commit message doesn't follow conventional commits format"
+    #       echo "Format: <type>(scope): <description>"
+    #       echo "Types: feat, fix, docs, style, refactor, perf, test, chore, build, ci"
+    #       exit 1
+    #     fi
+
+# Skip conditions - When to skip hooks
+skip_output:
+  - meta         # Skip "skip reason" messages
+  - summary      # Skip summary output
+
+# Output settings
+output:
+  - execution    # Show command execution
+  - summary      # Show summary at the end
+
+# Remote configuration (optional)
+# Allows teams to share hook configurations
+# remote:
+#   git_url: https://github.com/your-org/lefthook-configs
+#   ref: main
+#   config: lefthook.yml

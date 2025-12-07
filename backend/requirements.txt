@@ -46,3 +46,16 @@ typing_extensions==4.15.0
 tzdata==2025.2
 urllib3==2.5.0
 mcp>=0.9.0
+
+# Security & Testing Tools
+bandit==1.8.2           # Python security linter
+safety==3.7.0           # Dependency vulnerability scanner
+pytest==8.4.0           # Testing framework
+pytest-django==4.12.0   # Django integration for pytest
+pytest-cov==6.0.0       # Coverage reporting
+pytest-mock==3.15.0     # Mocking support
+factory-boy==3.3.0      # Test data factories
+Faker==36.0.0           # Fake data generation
+
+# Code Quality & Formatting (Modern Stack - Rust-based, 10-100x faster)
+ruff==0.8.4             # Linter + formatter (replaces flake8, black, isort, pyupgrade)
