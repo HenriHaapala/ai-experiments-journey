@@ -1,0 +1,8 @@
+{
+  "tool_name": "add_learning_entry",
+  "arguments": {
+    "title": "Agent Integration Test",
+    "content": "Successfully integrated LangChain agent with Django backend and tested all 5 MCP tools!",
+    "is_public": true
+  }
+}

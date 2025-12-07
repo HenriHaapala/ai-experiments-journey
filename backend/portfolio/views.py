@@ -10,7 +10,7 @@ import os
 import cohere
 from groq import Groq
 
-from .models import RoadmapSection, LearningEntry, KnowledgeChunk
+from .models import RoadmapSection, LearningEntry, KnowledgeChunk, RoadmapItem
 from .serializers import RoadmapSectionSerializer, LearningEntrySerializer
 from .utils.utils import smart_retrieve
 
@@ -26,6 +26,169 @@ class PublicLearningEntryListView(generics.ListAPIView):
         .prefetch_related("media")
     )
     serializer_class = LearningEntrySerializer
+
+
+class RoadmapProgressView(APIView):
+    """
+    GET /api/roadmap/progress/
+    Returns progress statistics for the roadmap
+    """
+    def get(self, request, *args, **kwargs):
+        sections = RoadmapSection.objects.all()
+        items = RoadmapItem.objects.all()
+        active_items = items.filter(is_active=True)
+        items_with_entries = items.filter(learning_entries__isnull=False).distinct()
+
+        learning_entries = LearningEntry.objects.all()
+        knowledge_chunks = KnowledgeChunk.objects.all()
+
+        # Calculate completion percentage
+        total_items = items.count()
+        completed_items = items_with_entries.count()
+        completion_percentage = round((completed_items / total_items * 100), 1) if total_items > 0 else 0.0
+
+        # Count chunks by source type
+        chunks_by_source = {}
+        for source_type in ['learning_entry', 'roadmap_item', 'site_content', 'document']:
+            chunks_by_source[source_type] = knowledge_chunks.filter(source_type=source_type).count()
+
+        return Response({
+            "success": True,
+            "stats": {
+                "roadmap": {
+                    "total_sections": sections.count(),
+                    "total_items": total_items,
+                    "active_items": active_items.count(),
+                    "items_with_entries": completed_items,
+                    "completion_percentage": completion_percentage
+                },
+                "learning": {
+                    "total_entries": learning_entries.count(),
+                    "public_entries": learning_entries.filter(is_public=True).count(),
+                    "private_entries": learning_entries.filter(is_public=False).count()
+                },
+                "knowledge_base": {
+                    "total_chunks": knowledge_chunks.count(),
+                    "by_source": chunks_by_source
+                }
+            }
+        })
+
+
+class RAGSearchView(APIView):
+    """
+    POST /api/rag/search/
+    Body: { "query": "...", "top_k": 5 }
+    Performs semantic search using RAG
+    """
+    def post(self, request, *args, **kwargs):
+        query = request.data.get("query", "").strip()
+        top_k = request.data.get("top_k", 5)
+
+        if not query:
+            return Response(
+                {"success": False, "error": "Missing 'query' field"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Setup Cohere client
+        cohere_api_key = os.getenv("COHERE_API_KEY")
+        cohere_model = os.getenv("COHERE_EMBED_MODEL", "embed-english-v3.0")
+
+        if not cohere_api_key:
+            return Response(
+                {"success": False, "error": "Cohere API key not configured"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        co_client = cohere.Client(cohere_api_key)
+
+        # Generate embedding for query
+        try:
+            embed_resp = co_client.embed(
+                texts=[query],
+                model=cohere_model,
+                input_type="search_query"
+            )
+            query_vector = embed_resp.embeddings[0]
+        except Exception as e:
+            return Response(
+                {"success": False, "error": f"Failed to embed query: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # Perform vector search
+        try:
+            chunks_qs, debug = smart_retrieve(
+                query_vector,
+                top_k=top_k,
+                candidate_k=max(16, top_k * 3)
+            )
+
+            results = []
+            for chunk in chunks_qs:
+                results.append({
+                    "id": chunk.id,
+                    "source_type": chunk.source_type,
+                    "title": chunk.title,
+                    "content": chunk.content,
+                    "section_title": chunk.section_title,
+                    "item_title": chunk.item_title,
+                    "tags": chunk.tags,
+                    "similarity": getattr(chunk, 'similarity', None)
+                })
+
+            return Response({
+                "success": True,
+                "query": query,
+                "top_k": top_k,
+                "results": results,
+                "debug": debug
+            })
+
+        except Exception as e:
+            return Response(
+                {"success": False, "error": f"Search failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class LearningEntryListCreateView(generics.ListCreateAPIView):
+    """
+    GET /api/roadmap/learning-entries/ - List learning entries
+    POST /api/roadmap/learning-entries/ - Create learning entry
+    """
+    serializer_class = LearningEntrySerializer
+
+    def get_queryset(self):
+        queryset = LearningEntry.objects.all().select_related(
+            "roadmap_item", "roadmap_item__section"
+        ).prefetch_related("media")
+
+        # Filter by roadmap_item if provided
+        roadmap_item_id = self.request.query_params.get('roadmap_item')
+        if roadmap_item_id:
+            queryset = queryset.filter(roadmap_item_id=roadmap_item_id)
+
+        # Limit results if requested
+        limit = self.request.query_params.get('limit')
+        if limit:
+            try:
+                queryset = queryset[:int(limit)]
+            except ValueError:
+                pass
+
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+
+        return Response({
+            "success": True,
+            "entry": serializer.data
+        }, status=status.HTTP_201_CREATED)
 
 class AIChatView(APIView):
     """

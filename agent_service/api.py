@@ -1,0 +1,202 @@
+"""
+FastAPI server for AI Portfolio Agent
+Provides REST API for interacting with the LangChain agent
+"""
+import os
+import logging
+from typing import Optional
+from datetime import datetime
+
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Create FastAPI app
+app = FastAPI(
+    title="AI Portfolio Agent API",
+    description="Intelligent agent for portfolio management using LangChain and MCP tools",
+    version="1.0.0"
+)
+
+# CORS configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:8000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Pydantic models
+class HealthResponse(BaseModel):
+    status: str
+    timestamp: str
+    service: str
+    version: str
+
+class ChatRequest(BaseModel):
+    message: str = Field(..., description="User message to the agent")
+    conversation_id: Optional[str] = Field(None, description="Optional conversation ID for context")
+
+class ChatResponse(BaseModel):
+    response: str = Field(..., description="Agent's response")
+    conversation_id: str = Field(..., description="Conversation ID")
+    timestamp: str
+
+class ToolExecutionRequest(BaseModel):
+    tool_name: str = Field(..., description="Name of the MCP tool to execute")
+    arguments: dict = Field(default_factory=dict, description="Tool arguments")
+
+class ToolExecutionResponse(BaseModel):
+    success: bool
+    result: dict
+    timestamp: str
+
+# Health check endpoint
+@app.get("/health", response_model=HealthResponse)
+async def health_check():
+    """Health check endpoint for Docker healthcheck"""
+    return HealthResponse(
+        status="healthy",
+        timestamp=datetime.utcnow().isoformat(),
+        service="ai-portfolio-agent",
+        version="1.0.0"
+    )
+
+# Root endpoint
+@app.get("/")
+async def root():
+    """Root endpoint with API information"""
+    return {
+        "service": "AI Portfolio Agent API",
+        "version": "1.0.0",
+        "status": "running",
+        "endpoints": {
+            "health": "/health",
+            "chat": "/api/chat",
+            "tools": "/api/tools",
+            "docs": "/docs"
+        }
+    }
+
+# Chat endpoint with agent integration
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest):
+    """
+    Chat with the AI agent
+
+    The agent can:
+    - Answer questions about your learning progress
+    - Create learning entries
+    - Search knowledge base
+    - Provide recommendations
+    """
+    try:
+        logger.info(f"Chat request: {request.message}")
+
+        # Import agent (lazy load to avoid startup issues)
+        from agent import get_agent
+
+        # Get agent instance
+        agent = get_agent()
+
+        # Generate conversation ID if not provided
+        conversation_id = request.conversation_id or f"conv_{int(datetime.utcnow().timestamp())}"
+
+        # Process message with agent
+        result = agent.chat(request.message, conversation_id=conversation_id)
+
+        if not result.get("success", False):
+            raise HTTPException(status_code=500, detail=result.get("error", "Unknown error"))
+
+        return ChatResponse(
+            response=result["response"],
+            conversation_id=conversation_id,
+            timestamp=datetime.utcnow().isoformat()
+        )
+
+    except Exception as e:
+        logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Agent error: {str(e)}")
+
+# Direct tool execution endpoint
+@app.post("/api/tools/execute", response_model=ToolExecutionResponse)
+async def execute_tool(request: ToolExecutionRequest):
+    """
+    Directly execute an MCP tool
+
+    Available tools:
+    - get_roadmap
+    - get_learning_entries
+    - search_knowledge
+    - add_learning_entry
+    - get_progress_stats
+    """
+    try:
+        logger.info(f"Tool execution: {request.tool_name} with args {request.arguments}")
+
+        # Import agent (lazy load)
+        from agent import get_agent
+
+        # Get agent instance
+        agent = get_agent()
+
+        # Execute tool
+        result = agent.execute_tool(request.tool_name, request.arguments)
+
+        if not result.get("success", False):
+            raise HTTPException(status_code=400, detail=result.get("error", "Unknown error"))
+
+        return ToolExecutionResponse(
+            success=True,
+            result=result,
+            timestamp=datetime.utcnow().isoformat()
+        )
+
+    except Exception as e:
+        logger.error(f"Error executing tool {request.tool_name}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Tool execution error: {str(e)}")
+
+# List available tools
+@app.get("/api/tools")
+async def list_tools():
+    """List all available MCP tools and their descriptions"""
+    return {
+        "tools": [
+            {
+                "name": "get_roadmap",
+                "description": "Get the complete AI Career Roadmap with all sections and items"
+            },
+            {
+                "name": "get_learning_entries",
+                "description": "Get learning log entries, optionally filtered by roadmap item"
+            },
+            {
+                "name": "search_knowledge",
+                "description": "Semantic search across all portfolio knowledge using RAG"
+            },
+            {
+                "name": "add_learning_entry",
+                "description": "Create a new learning log entry"
+            },
+            {
+                "name": "get_progress_stats",
+                "description": "Get portfolio progress statistics and metrics"
+            }
+        ]
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)

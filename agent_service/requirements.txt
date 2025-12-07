@@ -1,0 +1,25 @@
+# FastAPI and web server
+fastapi==0.115.5
+uvicorn[standard]==0.34.0
+pydantic==2.10.5
+pydantic-settings==2.7.0
+
+# LangChain ecosystem
+langchain==0.3.13
+langchain-groq==0.2.1
+langchain-community==0.3.13
+langgraph==0.2.59
+
+# Redis for memory/caching
+redis==5.2.1
+hiredis==3.0.0
+
+# HTTP client for MCP backend calls
+httpx==0.28.1
+aiohttp==3.11.11
+
+# Environment variables
+python-dotenv==1.2.1
+
+# Logging and utilities
+python-json-logger==3.2.1

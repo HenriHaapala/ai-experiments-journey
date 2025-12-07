@@ -35,7 +35,7 @@ services:
       - COHERE_API_KEY=${COHERE_API_KEY}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-      - ALLOWED_HOSTS=localhost,127.0.0.1
+      - ALLOWED_HOSTS=localhost,127.0.0.1,backend
       - COHERE_EMBED_MODEL=embed-english-v3.0
       - GROQ_MODEL=llama-3.3-70b-versatile
     depends_on:
@@ -67,5 +67,39 @@ services:
     depends_on:
       - postgres
 
+  redis:
+    image: redis:7-alpine
+    container_name: aiportfolio-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  agent:
+    build: ./agent_service
+    container_name: aiportfolio-agent
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - BACKEND_URL=http://backend:8000
+      - REDIS_URL=redis://redis:6379
+      - USE_MOCK_BACKEND=false
+    depends_on:
+      backend:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./agent_service:/app
+
 volumes:
   postgres_data:
+  redis_data:

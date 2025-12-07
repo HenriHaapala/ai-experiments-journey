@@ -21,16 +21,19 @@ This is an AI-powered portfolio application that tracks learning journey progres
 ### Deployment
 - **Infrastructure**: Fully Dockerized with docker-compose
 - **Containerization**: ✅ Complete - All services containerized
-- **Services**:
+- **Services** (6 containers):
   - PostgreSQL 16 + pgvector (port 5432)
   - Django Backend API (port 8000)
   - Next.js Frontend (port 3000)
   - Adminer DB Admin (port 8080)
+  - Redis (port 6379) - Phase 3: Caching & task queue
+  - Agent Service (port 8001) - Phase 3: LangChain agent
 - **Design Principle**: Cloud-native and production-ready
   - Environment variables for all configuration
   - No hardcoded paths or localhost references
   - Horizontal scaling ready
   - Separated concerns with health checks
+  - Microservices architecture with service-to-service communication
 
 ## Key Features
 
@@ -46,7 +49,15 @@ This is an AI-powered portfolio application that tracks learning journey progres
    - Confidence scoring and hallucination reduction
    - Smart retrieval system
 
-3. **Content Management**
+3. **MCP Server + Intelligent Agents** (Phase 3)
+   - Model Context Protocol server exposing 5 portfolio management tools
+   - LangChain-powered agent with natural language interface
+   - Autonomous task orchestration and multi-tool chaining
+   - GitHub webhook automation for learning entry creation
+   - Scheduled tasks and smart reminders
+   - Groq-powered reasoning and decision-making
+
+4. **Content Management**
    - Site content with slug-based routing
    - Media attachments (images, videos, links, files)
    - Markdown content support
@@ -87,6 +98,23 @@ docker-compose logs -f
 docker-compose down
 ```
 
+### Running Tests (Pre-Commit Validation)
+```bash
+# Run full test suite before committing
+npm run test:all
+
+# Run specific test suites
+npm run test:backend    # Django unit + integration tests
+npm run test:frontend   # Jest + React Testing Library
+npm run test:agent      # Agent service tests
+npm run test:e2e        # Playwright end-to-end tests
+npm run test:security   # Security scanning (SAST)
+
+# Pre-commit hook (automatic)
+# Runs linting, type checking, and fast tests
+git commit -m "message"  # Automatically triggers pre-commit checks
+```
+
 **Services available at:**
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:8000/api/health/
@@ -113,6 +141,287 @@ cd frontend
 npm install
 npm run dev
 ```
+
+## Current Plan: Phase 3 - Intelligent Agents & Automation (In Progress)
+
+### Overview
+Transform the MCP server from an internal tool into an intelligent, autonomous system with external access, LangChain-powered agents, and automated workflows.
+
+### Architecture
+
+```
+External World (GitHub, Claude Desktop, etc.)
+    ↓
+[SSE HTTP Endpoint] ← Django Backend (port 8000)
+    ↓
+[MCP Server] (5 tools: get_roadmap, search_knowledge, etc.)
+    ↓
+[LangChain Agent Service] (separate Docker container)
+    ├── Agent Brain (Groq API - llama-3.3-70b-versatile)
+    ├── MCP Tool Integration
+    ├── Conversation Memory
+    └── Task Orchestration
+    ↓
+[Automation Workers]
+    ├── GitHub Webhook Receiver
+    ├── Scheduled Tasks (progress reports, trend monitoring)
+    └── Background Jobs
+    ↓
+Django ORM → PostgreSQL + pgvector
+```
+
+### Phase 3 Components
+
+#### 1. External Access via SSE Transport
+**Goal**: Expose MCP server to external clients (Claude Desktop, custom agents)
+
+**Implementation:**
+- Add HTTP/SSE endpoint to Django backend (`/api/mcp/sse`)
+- Server-Sent Events for streaming tool responses
+- CORS configuration for web-based clients
+- API key authentication for security
+- Compatible with MCP client libraries
+
+**Why SSE?**
+- Simple HTTP-based protocol (firewall-friendly)
+- Built-in reconnection handling
+- Works with standard web infrastructure
+- No WebSocket complexity needed
+
+**Files to create:**
+- `backend/mcp_server/transports.py` - SSE transport implementation
+- `backend/mcp_server/urls.py` - Django URL routing
+- `backend/mcp_server/middleware.py` - Authentication middleware
+
+#### 2. LangChain Agent Integration (Separate Docker Service)
+**Goal**: Intelligent agent that can use MCP tools autonomously
+
+**Agent Capabilities:**
+- **Natural Language Interface**: Ask questions in plain English
+- **Multi-Tool Orchestration**: Chain multiple MCP tools together
+- **Context-Aware**: Maintains conversation history and learning context
+- **Reasoning**: Uses Groq's llama-3.3-70b-versatile for decision-making
+- **Proactive Suggestions**: "You haven't logged learning for 3 days - want help?"
+
+**Example Use Cases:**
+
+1. **Intelligent Learning Logging**
+   - User: "I spent today learning about transformer attention mechanisms"
+   - Agent: Searches knowledge base → Finds "Neural Networks" roadmap item → Creates detailed learning entry with context from existing knowledge
+
+2. **Progress Tracking & Planning**
+   - User: "What should I learn next?"
+   - Agent: Gets roadmap → Analyzes progress → Searches related knowledge → Recommends next topic with reasoning
+
+3. **Knowledge Synthesis**
+   - User: "Summarize everything I've learned about machine learning so far"
+   - Agent: Searches all ML-related entries → Synthesizes into coherent summary → Identifies knowledge gaps
+
+4. **Smart Query Answering**
+   - User: "Have I learned about backpropagation yet?"
+   - Agent: Semantic search → Finds related entries → Provides answer with references
+
+5. **Roadmap Optimization**
+   - User: "I'm interested in computer vision now"
+   - Agent: Analyzes roadmap → Suggests reordering items → Explains prerequisite knowledge
+
+**Implementation:**
+- Separate Docker service (`aiportfolio-agent`)
+- LangChain framework with custom MCP tool integration
+- Groq API for LLM inference (free tier, fast)
+- Redis for conversation memory/caching
+- RESTful API for frontend integration
+
+**Files to create:**
+- `agent_service/Dockerfile` - Agent service container
+- `agent_service/agent.py` - Main LangChain agent
+- `agent_service/mcp_tools.py` - MCP tool wrappers for LangChain
+- `agent_service/prompts.py` - System prompts and templates
+- `agent_service/memory.py` - Conversation history management
+- `agent_service/api.py` - FastAPI server for agent endpoints
+
+#### 3. GitHub Webhook Automation
+**Goal**: Automatically create learning entries from GitHub activity
+
+**Automation Flow:**
+1. Push code to GitHub repository
+2. GitHub sends webhook to `/api/automation/github-webhook`
+3. Parser analyzes commit messages, files changed, PR descriptions
+4. Agent decides if it's learning-worthy
+5. Creates learning entry with appropriate roadmap item linkage
+6. Optionally: Generate embeddings from code comments/README changes
+
+**Smart Features:**
+- **Technology Detection**: Parse `requirements.txt`, `package.json` changes to detect new tools learned
+- **Commit Message Analysis**: Extract learning insights from commit messages (e.g., "Learned how to implement OAuth2")
+- **PR Description Mining**: Convert PR descriptions into structured learning entries
+- **Auto-Tagging**: Automatically tag entries with technologies, concepts
+- **Duplicate Prevention**: Check existing knowledge to avoid redundant entries
+
+**Example Scenarios:**
+
+1. **New Project Setup**
+   - Commit: "Initial Django setup with PostgreSQL and pgvector"
+   - → Creates entry: "Set up Django project with vector database support"
+   - → Links to "Backend Development" roadmap item
+   - → Tags: Django, PostgreSQL, pgvector
+
+2. **Feature Implementation**
+   - PR: "Implemented RAG semantic search with Cohere embeddings"
+   - → Creates entry with PR description as content
+   - → Links to "RAG & Vector Search" roadmap item
+   - → Generates embedding for semantic search
+
+3. **Bug Fix Learning**
+   - Commit: "Fixed N+1 query issue using select_related"
+   - → Creates entry: "Learned about Django ORM optimization"
+   - → Tags: Django, Performance, Database
+
+**Implementation:**
+- Django endpoint: `/api/automation/github-webhook`
+- Webhook signature verification (HMAC)
+- Background task queue for processing (APScheduler)
+- Integration with LangChain agent for intelligent parsing
+
+**Files to create:**
+- `backend/automation/github_webhook.py` - Webhook receiver
+- `backend/automation/parsers.py` - Commit/PR parsing logic
+- `backend/automation/tasks.py` - Background task definitions
+
+#### 4. Additional Automation Ideas
+
+**Scheduled Progress Reports:**
+- Daily/weekly summary emails: "This week you learned about X, Y, Z"
+- Progress visualization: "You're 60% through the Neural Networks section"
+- Streak tracking: "7-day learning streak!"
+
+**Trending Topics Monitor:**
+- Scrape AI news sources (HackerNews, ArXiv, Papers with Code)
+- Suggest new roadmap items based on trending technologies
+- Alert when topics in your roadmap become trending
+
+**Document Upload Automation:**
+- Watch a designated folder for PDFs
+- Automatically ingest and chunk documents
+- Notify when new knowledge is indexed
+- Suggest which roadmap items the document relates to
+
+**Smart Reminders:**
+- "You marked 'Reinforcement Learning' as active but haven't logged progress in 5 days"
+- "Your last learning entry was about CNNs - ready to move to RNNs?"
+
+**Learning Insights:**
+- Analyze learning velocity: "You learn 3 new topics per week on average"
+- Identify knowledge gaps: "You know about models but haven't studied deployment"
+- Suggest optimal learning paths based on dependencies
+
+#### 5. Updated Docker Architecture
+
+**New Services:**
+- `aiportfolio-agent` (port 8001) - LangChain agent service
+- `aiportfolio-redis` (port 6379) - Caching and task queue
+
+**Updated docker-compose.yml:**
+```yaml
+services:
+  postgres: [existing]
+  backend: [existing]
+  frontend: [existing]
+  adminer: [existing]
+
+  redis:
+    image: redis:7-alpine
+    container_name: aiportfolio-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  agent:
+    build: ./agent_service
+    container_name: aiportfolio-agent
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - BACKEND_URL=http://backend:8000
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - backend
+      - redis
+```
+
+### Implementation Plan (Step-by-Step)
+
+**Step 1: SSE Transport Layer** (External Access)
+- [ ] Create `backend/mcp_server/transports.py` with SSE implementation
+- [ ] Add Django URLs for `/api/mcp/sse` endpoint
+- [ ] Implement API key authentication
+- [ ] Test with MCP client library
+
+**Step 2: Agent Service Setup** (Separate Docker Container)
+- [ ] Create `agent_service/` directory structure
+- [ ] Write Dockerfile for agent service
+- [ ] Set up FastAPI server for agent API
+- [ ] Add LangChain dependencies
+
+**Step 3: MCP Tool Integration in Agent**
+- [ ] Create LangChain tool wrappers for 5 MCP tools
+- [ ] Implement agent with Groq LLM
+- [ ] Add conversation memory with Redis
+- [ ] Test agent with example queries
+
+**Step 4: GitHub Webhook Automation**
+- [ ] Create webhook receiver endpoint
+- [ ] Implement commit/PR parsing logic
+- [ ] Integrate with agent for intelligent entry creation
+- [ ] Test with real GitHub webhooks
+
+**Step 5: Integration & Testing**
+- [ ] Update docker-compose.yml with new services
+- [ ] Test full workflow end-to-end
+- [ ] Document API endpoints and usage
+- [ ] Create example automation scenarios
+
+**Step 6: Additional Automations (Future)**
+- [ ] Scheduled progress reports
+- [ ] Trending topics monitor
+- [ ] Document upload automation
+- [ ] Smart reminders
+
+### Success Criteria
+
+- ✅ External clients can connect to MCP server via SSE
+- ✅ Agent can answer natural language queries using MCP tools
+- ✅ GitHub commits automatically create learning entries
+- ✅ Agent maintains conversation context across queries
+- ✅ All services run in Docker with proper networking
+- ✅ Complete documentation with example use cases
+
+### Technology Stack (Phase 3 Additions)
+
+- **LangChain**: Agent orchestration framework
+- **Groq API**: LLM inference (llama-3.3-70b-versatile) - FREE tier
+- **FastAPI**: Agent service HTTP API
+- **Redis**: Caching and conversation memory
+- **APScheduler**: Background task scheduling
+- **MCP SDK**: Model Context Protocol client/server
+
+### Why This Matters
+
+**For Portfolio Demonstration:**
+- Shows advanced AI agent development skills
+- Demonstrates understanding of MCP protocol
+- Production-ready microservices architecture
+- Real-world automation and workflow engineering
+
+**For Personal Use:**
+- Automatic learning journal from GitHub activity
+- Intelligent learning path recommendations
+- Semantic search across all knowledge
+- Progress tracking and motivation
+
+---
 
 ## Recent Development
 
@@ -146,19 +455,34 @@ ai-portfolio/
 │   │   ├── server.py        # MCP protocol server
 │   │   ├── tools.py         # Tool definitions
 │   │   ├── handlers.py      # Tool implementations
+│   │   ├── transports.py    # SSE transport (Phase 3)
+│   │   ├── urls.py          # Django URL routing (Phase 3)
+│   │   ├── middleware.py    # Authentication (Phase 3)
 │   │   └── README.md        # MCP server documentation
+│   ├── automation/          # Automation workflows (Phase 3)
+│   │   ├── github_webhook.py # GitHub integration
+│   │   ├── parsers.py       # Commit/PR parsing
+│   │   └── tasks.py         # Background tasks
 │   ├── portfolio/
 │   │   ├── models.py        # Django models (roadmap, embeddings, RAG)
 │   │   └── ...
 │   ├── venv/                # Python virtual environment (local dev)
-│   └── requirements.txt     # Python dependencies (includes mcp>=0.9.0)
+│   └── requirements.txt     # Python dependencies
+├── agent_service/           # LangChain Agent (Phase 3)
+│   ├── Dockerfile           # Agent service container
+│   ├── agent.py             # Main LangChain agent
+│   ├── mcp_tools.py         # MCP tool wrappers
+│   ├── prompts.py           # System prompts
+│   ├── memory.py            # Conversation history
+│   ├── api.py               # FastAPI server
+│   └── requirements.txt     # Agent dependencies
 ├── frontend/
 │   ├── Dockerfile           # Frontend Docker configuration
 │   ├── .dockerignore        # Docker build exclusions
 │   ├── app/                 # Next.js app directory
 │   ├── node_modules/        # Node dependencies
 │   └── package.json         # Node dependencies config
-├── docker-compose.yml       # Multi-service orchestration
+├── docker-compose.yml       # Multi-service orchestration (6 services)
 ├── .env.example             # Environment template (safe to commit)
 ├── .env                     # Actual secrets (gitignored)
 ├── DOCKER_SETUP.md          # Docker setup guide
@@ -201,6 +525,655 @@ ai-portfolio/
 - React 19
 - TypeScript 5
 - Tailwind CSS 4
+
+**Agent Service:**
+- LangChain with Groq LLM
+- FastAPI
+- Redis for caching & memory
+- Python 3.11
+
+## Testing & CI/CD Strategy
+
+### Overview
+Production-grade testing infrastructure with automated quality gates and continuous integration. Demonstrates industry best practices for modern web applications.
+
+### Testing Pyramid
+
+```
+         /\
+        /E2E\          <- End-to-End Tests (Playwright)
+       /------\
+      /Integration\    <- API Integration Tests
+     /------------\
+    /  Unit Tests  \   <- Component/Function Tests
+   /----------------\
+```
+
+### Test Suites
+
+#### 1. Backend Tests (pytest + Django Test Framework)
+**Location**: `backend/tests/`
+
+**Coverage**:
+- **Unit Tests**: Models, serializers, utilities (>80% coverage target)
+- **Integration Tests**: API endpoints, database operations
+- **RAG Tests**: Vector search, embedding generation, document processing
+- **MCP Tests**: Tool execution, handler logic
+
+**Tools**:
+- `pytest` - Test framework with fixtures and parametrization
+- `pytest-django` - Django integration
+- `pytest-cov` - Code coverage reporting
+- `factory_boy` - Test data factories
+- `faker` - Realistic fake data generation
+
+**Example**:
+```bash
+# Run all backend tests with coverage
+cd backend
+pytest --cov=portfolio --cov-report=html --cov-report=term
+
+# Run specific test modules
+pytest tests/test_models.py -v
+pytest tests/test_rag.py -k "test_semantic_search" -v
+
+# Run only unit tests (fast)
+pytest -m unit
+
+# Run integration tests (slower)
+pytest -m integration
+```
+
+**Key Test Files**:
+- `tests/test_models.py` - Django model validation
+- `tests/test_api.py` - REST API endpoints
+- `tests/test_rag.py` - RAG system functionality
+- `tests/test_mcp_tools.py` - MCP tool handlers
+- `tests/factories.py` - Test data factories
+
+#### 2. Frontend Tests (Jest + React Testing Library + Vitest)
+**Location**: `frontend/__tests__/`
+
+**Coverage**:
+- **Component Tests**: UI component rendering and interactions
+- **Hook Tests**: Custom React hooks
+- **Utility Tests**: Helper functions
+- **Integration Tests**: API client, data fetching
+
+**Tools**:
+- `Jest` - Test runner and assertion library
+- `React Testing Library` - Component testing with user-centric queries
+- `Vitest` - Fast unit test runner (alternative to Jest)
+- `@testing-library/jest-dom` - Custom matchers for DOM assertions
+- `msw` (Mock Service Worker) - API mocking
+
+**Example**:
+```bash
+cd frontend
+
+# Run all tests
+npm test
+
+# Run with coverage
+npm run test:coverage
+
+# Watch mode for development
+npm run test:watch
+
+# Run specific test file
+npm test -- Navigation.test.tsx
+```
+
+**Key Test Files**:
+- `__tests__/components/Navigation.test.tsx`
+- `__tests__/components/RoadmapCard.test.tsx`
+- `__tests__/hooks/useApi.test.ts`
+- `__tests__/utils/formatters.test.ts`
+
+#### 3. Agent Service Tests (pytest + pytest-asyncio)
+**Location**: `agent_service/tests/`
+
+**Coverage**:
+- **Unit Tests**: Tool wrappers, memory management, prompts
+- **Integration Tests**: LangChain agent execution, tool orchestration
+- **Mock Tests**: Testing with mock backend (no external dependencies)
+- **LLM Tests**: Groq API integration (with rate limiting)
+
+**Tools**:
+- `pytest` - Test framework
+- `pytest-asyncio` - Async test support
+- `pytest-mock` - Mocking capabilities
+- `httpx` - HTTP client for testing
+
+**Example**:
+```bash
+cd agent_service
+
+# Run all agent tests
+pytest -v
+
+# Run with mock backend (no external API calls)
+GROQ_API_KEY=mock pytest -v
+
+# Test specific functionality
+pytest tests/test_mcp_tools.py -v
+pytest tests/test_memory.py -v
+```
+
+**Key Test Files**:
+- `tests/test_agent.py` - LangChain agent behavior
+- `tests/test_mcp_tools.py` - MCP tool integration
+- `tests/test_memory.py` - Redis conversation memory
+- `tests/test_api.py` - FastAPI endpoints
+
+#### 4. End-to-End Tests (Playwright)
+**Location**: `e2e/tests/`
+
+**Coverage**:
+- **User Workflows**: Complete user journeys across frontend and backend
+- **Cross-browser**: Chrome, Firefox, Safari (WebKit)
+- **Mobile Testing**: Responsive design validation
+- **Visual Regression**: Screenshot comparison
+
+**Tools**:
+- `Playwright` - Modern E2E testing framework
+- `@playwright/test` - Test runner with built-in assertions
+- Parallel execution, video recording, trace viewer
+
+**Example Scenarios**:
+```typescript
+// e2e/tests/learning-journey.spec.ts
+test('User creates learning entry and sees it in roadmap', async ({ page }) => {
+  // 1. Navigate to roadmap
+  await page.goto('http://localhost:3000/roadmap');
+
+  // 2. Create new learning entry
+  await page.click('text=Add Learning Entry');
+  await page.fill('#title', 'Completed React 19 course');
+  await page.fill('#content', 'Learned about concurrent features');
+  await page.click('button:has-text("Save")');
+
+  // 3. Verify entry appears
+  await expect(page.locator('text=Completed React 19 course')).toBeVisible();
+
+  // 4. Verify RAG indexing (semantic search)
+  await page.goto('http://localhost:3000/search');
+  await page.fill('#search-input', 'concurrent features');
+  await expect(page.locator('text=React 19')).toBeVisible();
+});
+
+test('Agent answers questions about progress', async ({ page }) => {
+  await page.goto('http://localhost:3000/chat');
+  await page.fill('#message', 'What is my learning progress?');
+  await page.click('button:has-text("Send")');
+  await expect(page.locator('.agent-response')).toContainText('%');
+});
+```
+
+**Run E2E Tests**:
+```bash
+# Install browsers (first time only)
+npx playwright install
+
+# Run all E2E tests
+npm run test:e2e
+
+# Run with UI mode (visual debugging)
+npm run test:e2e:ui
+
+# Generate test report
+npx playwright show-report
+```
+
+#### 5. Security & Quality Scans
+
+**SAST (Static Application Security Testing)**:
+- `bandit` - Python security linter (backend)
+- `eslint-plugin-security` - JavaScript security (frontend)
+- `safety` - Python dependency vulnerability scanner
+- `npm audit` - Node.js dependency scanner
+
+**Code Quality**:
+- `pylint`, `flake8`, `black` - Python linting and formatting
+- `ESLint` + `Prettier` - JavaScript/TypeScript linting and formatting
+- `mypy` - Python type checking
+- `tsc --noEmit` - TypeScript type checking
+
+**Example**:
+```bash
+# Security scans
+npm run security:backend   # bandit + safety
+npm run security:frontend  # npm audit + ESLint security
+npm run security:all       # Full security audit
+
+# Code quality checks
+npm run lint:backend       # Python linting
+npm run lint:frontend      # ESLint + Prettier
+npm run type:check         # TypeScript + mypy
+```
+
+### Pre-Commit Hooks (Modern Options)
+
+Multiple approaches available - choose based on team preference:
+
+#### Option 1: **Biome** (2025 Recommended - Fastest)
+Modern all-in-one toolchain that replaces ESLint + Prettier with 100x faster performance:
+
+```bash
+# Install Biome (Rust-based, very fast)
+npm install --save-dev @biomejs/biome
+
+# biome.json configuration
+{
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true
+    }
+  },
+  "organizeImports": {
+    "enabled": true
+  }
+}
+
+# Pre-commit: .git/hooks/pre-commit
+#!/bin/sh
+npx @biomejs/biome check --apply --staged .
+```
+
+**Benefits**:
+- ⚡ 100x faster than ESLint + Prettier (Rust-based)
+- 🔧 Single tool for linting, formatting, import sorting
+- 📦 Zero config to get started
+- 🎯 Built specifically for modern JavaScript/TypeScript
+
+#### Option 2: **Lefthook** (GitHub's Choice - Lightweight)
+Used by GitHub, GitLab, and many modern projects. Faster than Husky, no npm dependencies:
+
+```bash
+# Install Lefthook (Go-based, cross-platform)
+npm install --save-dev lefthook
+
+# lefthook.yml configuration
+pre-commit:
+  parallel: true
+  commands:
+    biome:
+      glob: "*.{js,ts,tsx,json}"
+      run: npx @biomejs/biome check --apply --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+
+    python-format:
+      glob: "*.py"
+      run: black {staged_files}
+
+    python-lint:
+      glob: "*.py"
+      run: ruff check --fix {staged_files}
+
+    type-check:
+      run: npm run type:check
+
+    test-fast:
+      run: npm run test:fast
+
+pre-push:
+  commands:
+    test-all:
+      run: npm run test
+```
+
+**Benefits**:
+- 🚀 5-10x faster than Husky (Go-based)
+- 🔄 Parallel execution built-in
+- 🌍 Cross-platform (no shell scripts)
+- 🎯 Used by GitHub, GitLab, Shopify
+
+#### Option 3: **pre-commit** (Python Standard)
+Python ecosystem standard for multi-language projects:
+
+```bash
+# Install pre-commit (Python-based)
+pip install pre-commit
+
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/biomejs/biome
+    rev: v1.9.4
+    hooks:
+      - id: biome-check
+        additional_dependencies: ["@biomejs/biome"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+
+# Install hooks
+pre-commit install
+```
+
+**Benefits**:
+- 🐍 Python ecosystem standard
+- 🔧 Extensive plugin ecosystem
+- 📦 Language-agnostic
+- ✅ Auto-updates dependencies
+
+#### Option 4: **Husky + lint-staged** (Traditional - Still Valid)
+Still widely used, especially in JavaScript-heavy projects:
+
+```bash
+# Install Husky + lint-staged
+npm install --save-dev husky lint-staged
+
+# .husky/pre-commit
+npx lint-staged
+
+# package.json
+{
+  "lint-staged": {
+    "*.{ts,tsx}": ["biome check --apply"],
+    "*.py": ["ruff check --fix", "black"],
+    "*.{json,md,yml}": ["prettier --write"]
+  }
+}
+```
+
+**Benefits**:
+- 📚 Most documented
+- 🌐 Largest ecosystem
+- ⚛️ React/Next.js standard
+
+---
+
+### Recommended Stack for This Project
+
+**For 2025 Best Practices**:
+```bash
+# Frontend: Biome (replaces ESLint + Prettier)
+npm install --save-dev @biomejs/biome
+
+# Backend: Ruff (replaces flake8, black, isort - 10-100x faster)
+pip install ruff
+
+# Git Hooks: Lefthook (modern, fast, cross-platform)
+npm install --save-dev lefthook
+
+# Result: Fastest possible pre-commit checks (<1 second)
+```
+
+**Why this stack**:
+- ⚡ **Biome**: Rust-based, 100x faster than ESLint
+- ⚡ **Ruff**: Rust-based, 10-100x faster than flake8/black
+- ⚡ **Lefthook**: Go-based, 5-10x faster than Husky
+- 🎯 All tools from 2023-2025, built for modern development
+- 🚀 Pre-commit checks complete in <1 second instead of 10+ seconds
+
+### Continuous Integration (GitHub Actions)
+
+**Workflow**: `.github/workflows/ci.yml`
+
+Triggers on:
+- Push to `main` branch
+- Pull requests
+- Manual workflow dispatch
+
+**CI Pipeline**:
+```yaml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Job 1: Backend Tests
+  backend-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-django
+      - name: Run tests with coverage
+        run: |
+          cd backend
+          pytest --cov=portfolio --cov-report=xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./backend/coverage.xml
+
+  # Job 2: Frontend Tests
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+      - name: Run tests
+        run: |
+          cd frontend
+          npm run test:coverage
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./frontend/coverage/coverage-final.json
+
+  # Job 3: Agent Service Tests
+  agent-tests:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          cd agent_service
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+      - name: Run tests
+        run: |
+          cd agent_service
+          pytest --cov=. --cov-report=xml
+        env:
+          USE_MOCK_BACKEND: true
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+
+  # Job 4: E2E Tests
+  e2e-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Docker Compose
+        run: docker-compose up -d
+      - name: Wait for services
+        run: |
+          timeout 60 sh -c 'until curl -f http://localhost:3000; do sleep 2; done'
+          timeout 60 sh -c 'until curl -f http://localhost:8000/api/health/; do sleep 2; done'
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+      - name: Run E2E tests
+        run: npm run test:e2e
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report
+          path: playwright-report/
+
+  # Job 5: Security Scans
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Bandit (Python SAST)
+        run: |
+          pip install bandit
+          bandit -r backend/ agent_service/ -f json -o bandit-report.json
+      - name: Run Safety (Python dependencies)
+        run: |
+          pip install safety
+          safety check --file backend/requirements.txt --json
+      - name: Run npm audit
+        run: |
+          cd frontend
+          npm audit --audit-level=moderate
+
+  # Job 6: Build & Deploy (only on main)
+  build-deploy:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, agent-tests, e2e-tests, security]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Docker images
+        run: docker-compose build
+      - name: Push to registry (optional)
+        run: echo "Deploy to production"
+```
+
+### Test Coverage Goals
+
+| Component | Target | Current | Status |
+|-----------|--------|---------|--------|
+| Backend (Django) | 80% | TBD | 🔴 Not Started |
+| Frontend (React) | 70% | TBD | 🔴 Not Started |
+| Agent Service | 75% | TBD | 🔴 Not Started |
+| E2E Coverage | 5 critical paths | TBD | 🔴 Not Started |
+
+**Note**: Testing infrastructure implementation is planned after Phase 3 completion. Modern tooling stack documented above (Biome, Ruff, Lefthook) will be implemented when setting up automated testing.
+
+### Testing Best Practices
+
+1. **Write Tests First** (TDD when appropriate)
+   - Write failing test
+   - Implement minimum code to pass
+   - Refactor while keeping tests green
+
+2. **Test Naming Convention**:
+   ```python
+   # Backend (pytest)
+   def test_<function>_<scenario>_<expected_result>():
+       """Test that <function> <scenario> returns <expected_result>"""
+       pass
+
+   # Frontend (Jest)
+   describe('ComponentName', () => {
+     it('should render correctly when <condition>', () => {
+       // Test implementation
+     });
+   });
+   ```
+
+3. **AAA Pattern** (Arrange, Act, Assert):
+   ```python
+   def test_roadmap_item_completion():
+       # Arrange: Set up test data
+       item = RoadmapItemFactory(is_active=True)
+
+       # Act: Execute the behavior
+       result = item.mark_completed()
+
+       # Assert: Verify the outcome
+       assert result.is_active is False
+       assert result.completed_at is not None
+   ```
+
+4. **Mock External Dependencies**:
+   - API calls (Cohere, Groq)
+   - Database in unit tests (use factories)
+   - Time-dependent functions
+
+5. **Continuous Coverage Improvement**:
+   - Track coverage trends
+   - Fail CI if coverage drops > 5%
+   - Focus on critical business logic
+
+### Performance Testing (Future)
+
+**Load Testing** (Locust / k6):
+- API endpoint response times
+- Concurrent user handling
+- Database query performance
+- Vector search scalability
+
+**Example** (k6):
+```javascript
+// k6/load-test.js
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+
+export let options = {
+  stages: [
+    { duration: '1m', target: 50 },   // Ramp up to 50 users
+    { duration: '3m', target: 50 },   // Stay at 50 users
+    { duration: '1m', target: 100 },  // Ramp up to 100 users
+    { duration: '1m', target: 0 },    // Ramp down
+  ],
+  thresholds: {
+    http_req_duration: ['p(95)<500'], // 95% of requests < 500ms
+  },
+};
+
+export default function () {
+  let res = http.get('http://localhost:8000/api/roadmap/sections/');
+  check(res, { 'status is 200': (r) => r.status === 200 });
+  sleep(1);
+}
+```
+
+### Benefits for Employers
+
+This testing infrastructure demonstrates:
+
+✅ **Production-Ready Skills**: Industry-standard testing practices
+✅ **Quality Focus**: Automated quality gates prevent regressions
+✅ **CI/CD Expertise**: Complete automation pipeline
+✅ **Scalability Mindset**: Performance and load testing
+✅ **Security Awareness**: SAST and dependency scanning
+✅ **Maintainability**: High test coverage = confident refactoring
+✅ **Professional Workflow**: Pre-commit hooks, code reviews, standards
 
 ## Git Branch Structure
 
