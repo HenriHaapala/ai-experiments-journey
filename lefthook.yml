@@ -13,14 +13,16 @@ pre-commit:
     # ========================================================================
     # 1. SECRETS DETECTION (Highest Priority - Fast)
     # ========================================================================
-    secrets-check:
-      tags: security
-      run: gitleaks protect --staged --verbose --no-banner
-      stage_fixed: true  # Re-stage files if fixes are applied
-      priority: 1  # Run first
-      skip:
-        - merge
-        - rebase
+    # Note: Gitleaks requires manual installation (see INSTALL_TOOLS.md)
+    # Uncomment when Gitleaks is installed:
+    # secrets-check:
+    #   tags: security
+    #   run: gitleaks protect --staged --verbose --no-banner
+    #   stage_fixed: true
+    #   priority: 1
+    #   skip:
+    #     - merge
+    #     - rebase
 
     # ========================================================================
     # 2. FRONTEND LINTING & FORMATTING (Biome - Very Fast)
@@ -39,7 +41,7 @@ pre-commit:
       tags: backend format
       glob: "*.py"
       exclude: "*/migrations/*"
-      run: cd backend && ruff format {staged_files}
+      run: python -m ruff format {staged_files}
       stage_fixed: true
       priority: 2
 
@@ -50,7 +52,7 @@ pre-commit:
       tags: backend lint
       glob: "*.py"
       exclude: "*/migrations/*"
-      run: cd backend && ruff check --fix {staged_files}
+      run: python -m ruff check --fix {staged_files}
       stage_fixed: true
       priority: 3
 
