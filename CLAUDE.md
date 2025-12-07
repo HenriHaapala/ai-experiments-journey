@@ -1217,6 +1217,37 @@ This testing infrastructure demonstrates:
 - The project emphasizes hallucination reduction and confidence scoring in RAG
 - Document processing happens via the admin interface (DocumentUpload)
 - All learning content supports markdown formatting
+
+### AI Assistant Operating Rules
+
+**CRITICAL: Administrator Privileges**
+- **NEVER** attempt to run commands that require administrator/elevated privileges
+- **NEVER** use `sudo`, `choco install`, or similar commands that need admin rights
+- If a command requires admin privileges: **STOP** and ask the user to run it manually
+- Provide clear instructions for the user to execute, then wait for confirmation
+- Examples of commands that need admin:
+  - `choco install <package>` (Windows)
+  - `sudo apt install <package>` (Linux)
+  - System-wide tool installations
+  - Modifying system PATH or environment variables
+
+**When Admin Rights Are Needed:**
+1. Stop immediately
+2. Explain what needs to be done and why
+3. Provide the exact command for the user to run
+4. Wait for user confirmation that it's complete
+5. Only then proceed with next steps
+
+**Example:**
+```
+❌ BAD: Running `choco install gitleaks` directly
+✅ GOOD: "Gitleaks installation requires admin privileges. Please run this
+         command in an elevated PowerShell window:
+
+         choco install gitleaks -y
+
+         Let me know when it's complete, and I'll help you verify the installation."
+```
 - MCP server tools documented in [backend/mcp_server/README.md](backend/mcp_server/README.md)
 
 ## AI Assistant Guidelines

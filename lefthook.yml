@@ -13,16 +13,14 @@ pre-commit:
     # ========================================================================
     # 1. SECRETS DETECTION (Highest Priority - Fast)
     # ========================================================================
-    # Note: Gitleaks requires manual installation (see INSTALL_TOOLS.md)
-    # Uncomment when Gitleaks is installed:
-    # secrets-check:
-    #   tags: security
-    #   run: gitleaks protect --staged --verbose --no-banner
-    #   stage_fixed: true
-    #   priority: 1
-    #   skip:
-    #     - merge
-    #     - rebase
+    secrets-check:
+      tags: security
+      run: gitleaks protect --staged --verbose --no-banner
+      stage_fixed: true
+      priority: 1
+      skip:
+        - merge
+        - rebase
 
     # ========================================================================
     # 2. FRONTEND LINTING & FORMATTING (Biome - Very Fast)
