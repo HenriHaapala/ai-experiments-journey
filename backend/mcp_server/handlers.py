@@ -12,7 +12,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 from portfolio.models import RoadmapSection, RoadmapItem, LearningEntry, KnowledgeChunk
-from django.db.models import Q, Count
+from django.db.models import Q, Count, F
+from pgvector.django import CosineDistance
 import cohere
 
 
@@ -105,10 +106,10 @@ def handle_search_knowledge(arguments: dict) -> dict:
     # Generate query embedding
     query_vector = generate_embedding(query)
     
-    # Perform vector similarity search
+    # Perform vector similarity search (distance -> lower is better, so we negate for ordering)
     chunks = KnowledgeChunk.objects.annotate(
-        similarity=KnowledgeChunk.objects.cosine_similarity('embedding', query_vector)
-    ).order_by('-similarity')[:top_k]
+        distance=CosineDistance(F('embedding'), query_vector)
+    ).order_by('distance')[:top_k]
     
     results = []
     for chunk in chunks:
@@ -118,7 +119,8 @@ def handle_search_knowledge(arguments: dict) -> dict:
             "content": chunk.content[:500],  # Truncate for brevity
             "source_type": chunk.source_type,
             "section_title": chunk.section_title or "",
-            "similarity": float(getattr(chunk, 'similarity', 0))
+            "distance": float(getattr(chunk, 'distance', 0)),
+            "similarity": 1 - float(getattr(chunk, 'distance', 0))  # Convert distance to similarity
         })
     
     return {
