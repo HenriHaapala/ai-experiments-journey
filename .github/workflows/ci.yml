@@ -48,7 +48,11 @@ jobs:
 
       - name: Run Django migrations
         env:
-          DATABASE_URL: postgresql://aiportfolio:test_password_12345@localhost:5432/aiportfolio
+          DB_NAME: aiportfolio
+          DB_USER: aiportfolio
+          DB_PASSWORD: test_password_12345
+          DB_HOST: localhost
+          DB_PORT: '5432'
           SECRET_KEY: test-secret-key-for-ci-only
           DEBUG: 'True'
           COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
@@ -58,7 +62,11 @@ jobs:
 
       - name: Run tests with coverage
         env:
-          DATABASE_URL: postgresql://aiportfolio:test_password_12345@localhost:5432/aiportfolio
+          DB_NAME: aiportfolio
+          DB_USER: aiportfolio
+          DB_PASSWORD: test_password_12345
+          DB_HOST: localhost
+          DB_PORT: '5432'
           SECRET_KEY: test-secret-key-for-ci-only
           DEBUG: 'True'
           COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
@@ -182,7 +190,11 @@ jobs:
           cp .env.example .env
           echo "COHERE_API_KEY=test_key_for_build" >> .env
           echo "SECRET_KEY=test_secret_key_for_build" >> .env
-          echo "DATABASE_URL=postgresql://user:pass@postgres:5432/db" >> .env
+          echo "DB_NAME=aiportfolio" >> .env
+          echo "DB_USER=aiportfolio" >> .env
+          echo "DB_PASSWORD=test_password" >> .env
+          echo "DB_HOST=postgres" >> .env
+          echo "DB_PORT=5432" >> .env
 
       - name: Build backend image
         run: |
@@ -196,7 +208,7 @@ jobs:
 
       - name: Test docker-compose configuration
         run: |
-          docker-compose config > /dev/null
+          docker compose config > /dev/null
           echo "✅ docker-compose.yml is valid"
 
   # Job 5: Linting & Code Quality
