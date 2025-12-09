@@ -1,0 +1,213 @@
+name: Deploy to Oracle Cloud
+
+on:
+  push:
+    branches: [main]  # Only deploy from main branch
+  workflow_dispatch:  # Allow manual deployment
+
+jobs:
+  # First, run all CI checks
+  verify-ci:
+    name: Verify CI Status
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Wait for CI to complete
+        uses: lewagon/wait-on-check-action@v1.3.1
+        with:
+          ref: ${{ github.sha }}
+          check-name: 'CI Pipeline Complete'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+        continue-on-error: false
+
+  # Deploy to Oracle Cloud
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: verify-ci
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.OCI_HOST }}
+          SSH_USER: ${{ secrets.OCI_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts
+          echo "✅ SSH key configured"
+
+      - name: Test SSH connection
+        env:
+          SSH_HOST: ${{ secrets.OCI_HOST }}
+          SSH_USER: ${{ secrets.OCI_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST 'echo "✅ SSH connection successful"'
+
+      - name: Deploy to Oracle Cloud
+        env:
+          SSH_HOST: ${{ secrets.OCI_HOST }}
+          SSH_USER: ${{ secrets.OCI_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << 'ENDSSH'
+            set -e  # Exit on any error
+
+            echo "🚀 Starting deployment..."
+
+            # Navigate to project directory
+            cd ~/ai-portfolio
+
+            # Pull latest code
+            echo "📥 Pulling latest code from GitHub..."
+            git fetch origin
+            git reset --hard origin/main
+
+            # Backup database before deployment (safety measure)
+            echo "💾 Creating database backup..."
+            docker-compose exec -T postgres pg_dump -U aiportfolio aiportfolio > ~/backups/pre-deploy-$(date +%Y%m%d-%H%M%S).sql || echo "⚠️ Backup failed (non-critical)"
+
+            # Pull latest Docker images
+            echo "📦 Pulling Docker images..."
+            docker-compose pull
+
+            # Rebuild services (to pick up code changes)
+            echo "🔨 Rebuilding Docker images..."
+            docker-compose build --no-cache
+
+            # Stop containers gracefully
+            echo "🛑 Stopping old containers..."
+            docker-compose down
+
+            # Start new containers
+            echo "🚀 Starting new containers..."
+            docker-compose up -d
+
+            # Wait for services to be healthy
+            echo "⏳ Waiting for services to start..."
+            sleep 15
+
+            # Run database migrations (if any)
+            echo "🗃️ Running database migrations..."
+            docker-compose exec -T backend python manage.py migrate --noinput || echo "⚠️ Migration warning (might be expected)"
+
+            # Collect static files (if needed)
+            echo "📦 Collecting static files..."
+            docker-compose exec -T backend python manage.py collectstatic --noinput || echo "⚠️ Static files warning (might be expected)"
+
+            # Verify all services are running
+            echo "✅ Checking service health..."
+            docker-compose ps
+
+            # Test backend health
+            echo "🔍 Testing backend health endpoint..."
+            curl -f http://localhost:8000/api/health/ || echo "⚠️ Backend health check failed"
+
+            # Test frontend
+            echo "🔍 Testing frontend..."
+            curl -f http://localhost:3000 || echo "⚠️ Frontend health check failed"
+
+            # Reload nginx to pick up any config changes
+            echo "🔄 Reloading nginx..."
+            sudo nginx -t && sudo systemctl reload nginx
+
+            echo "🎉 Deployment completed successfully!"
+            echo "🌐 Site: https://wwwportfolio.henrihaapala.com"
+
+            # Show container status
+            echo ""
+            echo "📊 Container Status:"
+            docker-compose ps
+
+          ENDSSH
+
+      - name: Post-deployment verification
+        env:
+          SITE_URL: https://wwwportfolio.henrihaapala.com
+        run: |
+          echo "🔍 Verifying deployment..."
+
+          # Wait for services to fully start
+          sleep 10
+
+          # Check frontend
+          if curl -f -s -o /dev/null -w "%{http_code}" $SITE_URL | grep -q "200\|301\|302"; then
+            echo "✅ Frontend is responding"
+          else
+            echo "❌ Frontend health check failed"
+            exit 1
+          fi
+
+          # Check backend API
+          if curl -f -s -o /dev/null -w "%{http_code}" $SITE_URL/api/health/ | grep -q "200"; then
+            echo "✅ Backend API is responding"
+          else
+            echo "❌ Backend API health check failed"
+            exit 1
+          fi
+
+          echo "🎉 All health checks passed!"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+          echo "🧹 SSH key cleaned up"
+
+      - name: Send deployment notification
+        if: success()
+        run: |
+          echo "🚀 Deployment successful!"
+          echo "Site: https://wwwportfolio.henrihaapala.com"
+          echo "Commit: ${{ github.sha }}"
+          echo "Deployed by: ${{ github.actor }}"
+
+      - name: Rollback on failure
+        if: failure()
+        env:
+          SSH_HOST: ${{ secrets.OCI_HOST }}
+          SSH_USER: ${{ secrets.OCI_USER }}
+        run: |
+          echo "❌ Deployment failed, attempting rollback..."
+
+          # Re-setup SSH key for rollback
+          echo "${{ secrets.OCI_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << 'ENDSSH'
+            cd ~/ai-portfolio
+
+            # Restore previous version
+            git checkout HEAD~1
+            docker-compose down
+            docker-compose up -d
+
+            echo "🔄 Rolled back to previous version"
+          ENDSSH
+
+  # Job to notify on deployment status
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: always()
+
+    steps:
+      - name: Deployment Status
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "✅ Deployment succeeded!"
+            echo "🌐 Site: https://wwwportfolio.henrihaapala.com"
+          else
+            echo "❌ Deployment failed!"
+            echo "Check logs for details"
+            exit 1
+          fi

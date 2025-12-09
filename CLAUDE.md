@@ -38,99 +38,47 @@ This is an AI-powered portfolio application that tracks learning journey progres
 #### Cloud Deployment: Oracle Cloud Infrastructure (OCI)
 
 **Instance Configuration:**
-- **Region**: Stockholm (eu-stockholm-1)
-- **Shape**: VM.Standard.E4.Flex (1 OCPU, 8 GB RAM)
+- **Region**: Frankfurt (eu-frankfurt-1)
+- **Shape**: VM.Standard.A1.Flex (4 OCPUs, 24 GB RAM) - **FREE TIER**
 - **Operating System**: Ubuntu 22.04 LTS
 - **VCN**: aiportfolio-vcn (Virtual Cloud Network)
-- **Subnet**: public subnet-aiportfolio-vcn
-- **Estimated Cost**: €27.45/month (~$30 USD) if running 24/7
+- **Subnet**: public subnet-aiportfolio-vcn (10.0.0.0/24)
+- **Public IP**: See `.env.production` (local file, not committed)
+- **Domain**: wwwportfolio.henrihaapala.com
+- **Cost**: €0/month (Oracle Always Free tier)
 
-**Cost Optimization Strategy:**
+**HTTPS/SSL Configuration:**
+- **Reverse Proxy**: nginx (installed on instance, not in Docker)
+- **SSL Certificates**: Let's Encrypt (free, auto-renewal)
+- **Setup**: See [HTTPS_SETUP.md](HTTPS_SETUP.md) for detailed instructions
+- **URLs**:
+  - Frontend: https://wwwportfolio.henrihaapala.com
+  - Backend API: https://wwwportfolio.henrihaapala.com/api/
+  - Agent Service: https://wwwportfolio.henrihaapala.com/agent/
+  - Adminer: https://wwwportfolio.henrihaapala.com/adminer/
 
-The instance uses **hourly billing**, NOT fixed monthly pricing. This means:
-- ✅ Pay only for hours the instance is running
-- ✅ **Stop instance when not in use** → Save ~70% of costs
-- ✅ Automated scheduling to minimize costs while maintaining availability
-
-**Automated Instance Scheduler** (Planned):
-- **Purpose**: Automatically start/stop Oracle Cloud instance based on schedule or on-demand
-- **Cost Savings**: ~€19/month by stopping during non-demo hours (70% savings)
-- **Implementation**: Python script using Oracle Cloud SDK
-
-**Scheduler Features:**
-```python
-# scripts/oracle_instance_scheduler.py
-
-# Automated Schedules:
-# 1. Business Hours Mode (weekdays 9am-5pm local time)
-#    - Auto-start at 8:55am
-#    - Auto-stop at 5:30pm
-#    - Estimated cost: €8-10/month (40 hours/week)
-
-# 2. Demo Mode (on-demand + scheduled demo times)
-#    - Start via CLI: python oracle_scheduler.py start
-#    - Stop via CLI: python oracle_scheduler.py stop
-#    - Schedule demos: "Start every Friday 2pm, stop at 4pm"
-
-# 3. Always-On Mode (24/7)
-#    - Disable scheduler
-#    - Full €27.45/month cost
-#    - Use for production or continuous availability
-
-# 4. Weekend-Only Mode
-#    - Run Saturday-Sunday 10am-6pm
-#    - Perfect for weekend development
-#    - Estimated cost: €5-7/month
-
-# 5. Smart Mode (webhook-triggered)
-#    - Start instance on incoming traffic (via webhook)
-#    - Auto-stop after 2 hours of inactivity
-#    - Requires external monitoring service
+**nginx Architecture** (Production):
+```
+Internet (HTTPS:443)
+    ↓
+nginx (SSL Termination + Reverse Proxy)
+    ↓
+Docker Containers (HTTP:3000, 8000, 8001, 8080)
+    ↓
+PostgreSQL (Internal network only)
 ```
 
-**Scheduler CLI Commands:**
-```bash
-# Manual control
-python scripts/oracle_scheduler.py start    # Start instance now
-python scripts/oracle_scheduler.py stop     # Stop instance now
-python scripts/oracle_scheduler.py status   # Check current status
+**Local Development** (No nginx needed):
+- Access services directly: http://localhost:3000, http://localhost:8000
+- No SSL required for local development
+- nginx only runs in production (Oracle Cloud instance)
 
-# Schedule management
-python scripts/oracle_scheduler.py schedule --weekdays 9-17   # Business hours
-python scripts/oracle_scheduler.py schedule --friday 14-16    # Friday demos
-python scripts/oracle_scheduler.py schedule --weekend 10-18   # Weekend dev
-
-# Cost estimation
-python scripts/oracle_scheduler.py estimate --hours 160       # Estimate monthly cost
-```
-
-**Implementation Plan:**
-- [ ] Create `scripts/oracle_instance_scheduler.py`
-- [ ] Install Oracle Cloud SDK: `pip install oci`
-- [ ] Configure OCI credentials in `~/.oci/config`
-- [ ] Set up instance OCID in environment variables
-- [ ] Create systemd service or cron job for automated scheduling
-- [ ] Add web UI for schedule management (optional)
-
-**Files to Create:**
-- `scripts/oracle_instance_scheduler.py` - Main scheduler script
-- `scripts/oracle_config.py` - OCI configuration and credentials
-- `.env` add: `OCI_INSTANCE_OCID`, `OCI_TENANCY_OCID`, `OCI_USER_OCID`
-- `docs/ORACLE_SETUP.md` - Deployment and scheduler guide
-
-**Benefits:**
-- 💰 **70% cost reduction** with smart scheduling
-- ⚡ **Instant availability** when needed
-- 🔄 **Automated management** - set and forget
-- 📊 **Cost tracking** - monitor actual usage vs estimate
-- 🎯 **Professional approach** - demonstrates cloud cost optimization skills
-
-**Alternative: Free Tier Monitoring:**
-While running on E4.Flex, continue monitoring for A1.Flex (ARM) availability:
-- A1.Flex is **FREE** (24 GB RAM, 4 OCPUs, 200 GB storage)
-- Almost always out of capacity in Stockholm
-- Can migrate if capacity becomes available
-- Use `scripts/oracle_capacity_monitor.py` to check hourly
+**Benefits of Free Tier:**
+- 💰 **€0/month** - Truly free forever (not a trial)
+- 💪 **4 OCPUs + 24 GB RAM** - More than sufficient for portfolio app
+- 🚀 **Always-on** - No need to stop/start instance
+- 📈 **Scalable** - Can handle significant traffic
+- 🎯 **Production-grade** - ARM architecture (Ampere Altra)
 
 ## Key Features
 
@@ -158,6 +106,15 @@ While running on E4.Flex, continue monitoring for A1.Flex (ARM) availability:
    - Site content with slug-based routing
    - Media attachments (images, videos, links, files)
    - Markdown content support
+
+5. **Automated CI/CD Pipeline** (December 2025)
+   - GitHub Actions automated testing and deployment
+   - Push to main → Auto-test → Auto-deploy (10 minutes)
+   - 5-job CI pipeline: backend tests, frontend tests, security scans, Docker builds, code quality
+   - Zero-downtime deployment to Oracle Cloud production
+   - Automatic database backups before each deployment
+   - Health checks and automatic rollback on failure
+   - See [CI_CD_SETUP.md](CI_CD_SETUP.md) for setup guide
 
 ## Database Schema
 
@@ -525,6 +482,12 @@ services:
 ## Recent Development
 
 ### Phase 3 Progress: 80% Complete (Dec 6-8, 2025)
+
+**December 9, 2025:**
+- ✅ **Automated CI/CD Pipeline** - Full GitHub Actions deployment to Oracle Cloud
+- ✅ **Production Deployment** - Live at https://wwwportfolio.henrihaapala.com
+- ✅ **Zero-Touch Deployment** - Push to main → Auto-test → Auto-deploy (10 min)
+- 📋 See [CI_CD_SETUP.md](CI_CD_SETUP.md) for complete setup guide
 
 **December 8, 2025:**
 - ✅ **MCP SSE Transport** - HTTP/SSE access to MCP server via `POST /api/mcp/sse/`

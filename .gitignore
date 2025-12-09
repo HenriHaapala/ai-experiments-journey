@@ -15,6 +15,7 @@ desktop.ini
 .env
 .env.local
 .env.*.local
+.env.production
 *.key
 *.pem
 *.crt
