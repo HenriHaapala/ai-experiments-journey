@@ -13,13 +13,21 @@ jobs:
     name: Backend Tests (Django + PostgreSQL)
     runs-on: ubuntu-latest
 
+    env:
+      # CI Test Database Credentials (ephemeral, local to runner)
+      TEST_DB_NAME: aiportfolio
+      TEST_DB_USER: aiportfolio
+      TEST_DB_PASSWORD: ci_test_pass_12345
+      TEST_DB_HOST: localhost
+      TEST_DB_PORT: '5432'
+
     services:
       postgres:
         image: pgvector/pgvector:pg16
         env:
           POSTGRES_DB: aiportfolio
           POSTGRES_USER: aiportfolio
-          POSTGRES_PASSWORD: test_password_12345
+          POSTGRES_PASSWORD: ci_test_pass_12345
         ports:
           - 5432:5432
         options: >-
@@ -46,14 +54,18 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov pytest-django
 
+      - name: Create pgvector extension
+        run: |
+          PGPASSWORD=$TEST_DB_PASSWORD psql -h $TEST_DB_HOST -U $TEST_DB_USER -d $TEST_DB_NAME -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
       - name: Run Django migrations
         env:
-          DB_NAME: aiportfolio
-          DB_USER: aiportfolio
-          DB_PASSWORD: test_password_12345
-          DB_HOST: localhost
-          DB_PORT: '5432'
-          SECRET_KEY: test-secret-key-for-ci-only
+          DB_NAME: ${{ env.TEST_DB_NAME }}
+          DB_USER: ${{ env.TEST_DB_USER }}
+          DB_PASSWORD: ${{ env.TEST_DB_PASSWORD }}
+          DB_HOST: ${{ env.TEST_DB_HOST }}
+          DB_PORT: ${{ env.TEST_DB_PORT }}
+          SECRET_KEY: ci-test-secret-key
           DEBUG: 'True'
           COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
         run: |
@@ -62,12 +74,12 @@ jobs:
 
       - name: Run tests with coverage
         env:
-          DB_NAME: aiportfolio
-          DB_USER: aiportfolio
-          DB_PASSWORD: test_password_12345
-          DB_HOST: localhost
-          DB_PORT: '5432'
-          SECRET_KEY: test-secret-key-for-ci-only
+          DB_NAME: ${{ env.TEST_DB_NAME }}
+          DB_USER: ${{ env.TEST_DB_USER }}
+          DB_PASSWORD: ${{ env.TEST_DB_PASSWORD }}
+          DB_HOST: ${{ env.TEST_DB_HOST }}
+          DB_PORT: ${{ env.TEST_DB_PORT }}
+          SECRET_KEY: ci-test-secret-key
           DEBUG: 'True'
           COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
         run: |
@@ -188,11 +200,11 @@ jobs:
       - name: Create .env file for build
         run: |
           cp .env.example .env
-          echo "COHERE_API_KEY=test_key_for_build" >> .env
-          echo "SECRET_KEY=test_secret_key_for_build" >> .env
+          echo "COHERE_API_KEY=ci_test_key" >> .env
+          echo "SECRET_KEY=ci_test_secret" >> .env
           echo "DB_NAME=aiportfolio" >> .env
           echo "DB_USER=aiportfolio" >> .env
-          echo "DB_PASSWORD=test_password" >> .env
+          echo "DB_PASSWORD=ci_test_pass" >> .env
           echo "DB_HOST=postgres" >> .env
           echo "DB_PORT=5432" >> .env
 
