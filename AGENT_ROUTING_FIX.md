@@ -23,35 +23,47 @@ The issue: Agent service listens on `/health`, but nginx sends `/agent/health` (
 ```nginx
 # Agent service (port 8001)
 location /agent/ {
-    proxy_pass http://localhost:8001/agent/;  # ❌ Forwards /agent/health → http://localhost:8001/agent/health
+    proxy_pass http://localhost:8001;  # ❌ Missing trailing slash - doesn't strip prefix
     proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection 'upgrade';
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_cache_bypass $http_upgrade;
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
 }
 ```
+
+**How it currently behaves:**
+- Request: `https://wwwportfolio.henrihaapala.com/agent/health`
+- nginx forwards to: `http://localhost:8001/agent/health` (keeps `/agent` prefix)
+- Agent service expects: `http://localhost:8001/health`
+- Result: ❌ 502 Bad Gateway (agent doesn't have `/agent/health` endpoint)
 
 **Fixed configuration** (strips `/agent` prefix):
 ```nginx
 # Agent service (port 8001) - Strip /agent prefix
 location /agent/ {
-    proxy_pass http://localhost:8001/;  # ✅ Strips prefix: /agent/health → http://localhost:8001/health
+    proxy_pass http://localhost:8001/;  # ✅ Trailing slash strips the prefix
     proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection 'upgrade';
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_cache_bypass $http_upgrade;
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
 }
 ```
 
-**Key change**: `proxy_pass http://localhost:8001/agent/;` → `proxy_pass http://localhost:8001/;`
+**How it will behave after fix:**
+- Request: `https://wwwportfolio.henrihaapala.com/agent/health`
+- nginx strips `/agent` and forwards to: `http://localhost:8001/health`
+- Agent service responds: ✅ 200 OK
+- Result: ✅ Working!
+
+**Key change**: `proxy_pass http://localhost:8001;` → `proxy_pass http://localhost:8001/;` (add trailing slash)
 
 The trailing `/` in `proxy_pass` tells nginx to strip the matched location prefix.
 
@@ -71,14 +83,16 @@ cd ~/ai-portfolio
 sudo nano /etc/nginx/sites-available/aiportfolio
 ```
 
-Find the `location /agent/` block (around line 40-50) and change:
+Find the `location /agent/` block (around line 40-50) and change this line:
 ```nginx
-proxy_pass http://localhost:8001/agent/;
+proxy_pass http://localhost:8001;  # Current (no trailing slash)
 ```
 to:
 ```nginx
-proxy_pass http://localhost:8001/;
+proxy_pass http://localhost:8001/;  # Add trailing slash
 ```
+
+**Important**: Just add a single `/` at the end. That's it!
 
 Save and exit (Ctrl+X, Y, Enter).
 
