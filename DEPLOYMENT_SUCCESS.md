@@ -92,7 +92,7 @@ sudo netfilter-persistent save
 
 ### Django HTTPS Settings
 ```bash
-# Added to /home/ubuntu/ai-experiments-journey/.env:
+# Added to /home/ubuntu/ai-portfolio/.env:
 CSRF_TRUSTED_ORIGINS=https://wwwportfolio.henrihaapala.com
 SECURE_PROXY_SSL_HEADER=HTTP_X_FORWARDED_PROTO,https
 USE_X_FORWARDED_HOST=True
@@ -250,12 +250,12 @@ ssh -i C:\AIandClaude\oraclecloud\ssh-key-2025-12-09.key ubuntu@${OCI_HOST}
 
 ### Application Directory
 ```
-/home/ubuntu/ai-experiments-journey/
+/home/ubuntu/ai-portfolio/
 ```
 
 ### Environment File
 ```
-/home/ubuntu/ai-experiments-journey/.env
+/home/ubuntu/ai-portfolio/.env
 ```
 
 ### nginx Configuration

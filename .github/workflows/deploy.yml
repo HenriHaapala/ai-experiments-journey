@@ -71,7 +71,7 @@ jobs:
             echo "🚀 Starting deployment..."
 
             # Navigate to project directory
-            cd ~/ai-experiments-journey
+            cd ~/ai-portfolio
 
             # Pull latest code
             echo "📥 Pulling latest code from GitHub..."
@@ -190,7 +190,7 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
 
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << 'ENDSSH'
-            cd ~/ai-experiments-journey
+            cd ~/ai-portfolio
 
             # Restore previous version
             git checkout HEAD~1

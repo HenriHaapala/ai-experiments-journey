@@ -139,14 +139,14 @@ server {
 
     # Static files (if needed)
     location /static/ {
-        alias /home/ubuntu/ai-experiments-journey/backend/staticfiles/;
+        alias /home/ubuntu/ai-portfolio/backend/staticfiles/;
         expires 30d;
         add_header Cache-Control "public, immutable";
     }
 
     # Media files (if needed)
     location /media/ {
-        alias /home/ubuntu/ai-experiments-journey/backend/media/;
+        alias /home/ubuntu/ai-portfolio/backend/media/;
         expires 7d;
         add_header Cache-Control "public";
     }
@@ -205,7 +205,7 @@ sudo certbot renew --dry-run
 
 ```bash
 # Edit .env file to add HTTPS settings
-cd /home/ubuntu/ai-experiments-journey
+cd /home/ubuntu/ai-portfolio
 nano .env
 ```
 
@@ -229,7 +229,7 @@ CSRF_COOKIE_SECURE=True
 
 ```bash
 # If you have a .env.local in frontend, update API URL
-cd /home/ubuntu/ai-experiments-journey/frontend
+cd /home/ubuntu/ai-portfolio/frontend
 nano .env.local
 ```
 
@@ -242,7 +242,7 @@ NEXT_PUBLIC_API_URL=https://wwwportfolio.henrihaapala.com/api
 
 ```bash
 # Go back to project root
-cd /home/ubuntu/ai-experiments-journey
+cd /home/ubuntu/ai-portfolio
 
 # Restart containers to apply new environment variables
 docker-compose down

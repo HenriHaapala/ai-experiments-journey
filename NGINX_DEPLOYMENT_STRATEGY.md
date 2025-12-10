@@ -206,7 +206,7 @@ jobs:
       - name: SSH to instance
         run: |
           ssh ubuntu@130.61.72.122 << 'EOF'
-            cd /home/ubuntu/ai-experiments-journey
+            cd /home/ubuntu/ai-portfolio
             git pull
             docker-compose down
             docker-compose up -d --build

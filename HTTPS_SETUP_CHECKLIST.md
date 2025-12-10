@@ -105,14 +105,14 @@ server {
 
     # Static files
     location /static/ {
-        alias /home/ubuntu/ai-experiments-journey/backend/staticfiles/;
+        alias /home/ubuntu/ai-portfolio/backend/staticfiles/;
         expires 30d;
         add_header Cache-Control "public, immutable";
     }
 
     # Media files
     location /media/ {
-        alias /home/ubuntu/ai-experiments-journey/backend/media/;
+        alias /home/ubuntu/ai-portfolio/backend/media/;
         expires 7d;
         add_header Cache-Control "public";
     }
@@ -154,7 +154,7 @@ sudo certbot certificates
 
 ### 8. Update Django Settings
 ```bash
-cd /home/ubuntu/ai-experiments-journey
+cd /home/ubuntu/ai-portfolio
 nano .env
 ```
 
@@ -177,7 +177,7 @@ ALLOWED_HOSTS=wwwportfolio.henrihaapala.com,130.61.72.122,localhost,127.0.0.1
 
 ### 9. Restart Docker Containers
 ```bash
-cd /home/ubuntu/ai-experiments-journey
+cd /home/ubuntu/ai-portfolio
 docker-compose down
 docker-compose up -d
 docker-compose ps  # Verify all containers are running
