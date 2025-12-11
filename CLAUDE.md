@@ -967,6 +967,401 @@ npm run test:e2e:ui
 npx playwright show-report
 ```
 
+---
+
+### E2E Testing Implementation Plan (TODO)
+
+**Goal**: Automated end-to-end tests that validate all critical user workflows and generate detailed failure reports for quick debugging and repair.
+
+#### Test Coverage Strategy
+
+**Critical User Journeys** (Must Have):
+1. **Homepage & Health Checks**
+   - Page loads successfully
+   - Backend health indicator shows "ok"
+   - Navigation menu renders
+   - Footer links work
+
+2. **AI Chat Functionality** (Homepage Hero)
+   - Chat input accepts text
+   - Sending message triggers API call
+   - AI response appears within 10 seconds
+   - Confidence score displays (if available)
+   - Context sources are expandable
+   - Follow-up questions render
+   - Error handling for failed requests
+
+3. **Roadmap Viewing**
+   - `/roadmap` page loads
+   - Roadmap sections render with titles
+   - Roadmap items display within sections
+   - Progress indicators show (if applicable)
+   - Click-to-expand sections work
+
+4. **Learning Entries**
+   - `/learning` page loads
+   - Public learning entries display
+   - Entry titles and content render
+   - Pagination works (if implemented)
+   - Filter/search works (if implemented)
+
+5. **Backend API Health**
+   - `/api/health/` returns 200 OK
+   - `/api/roadmap/sections/` returns valid JSON
+   - `/api/learning/public/` returns entries
+   - `/api/ai/chat/` accepts POST requests
+   - `/agent/health` returns healthy status
+
+6. **Agent Service** (if integrated)
+   - Agent chat interface loads
+   - Message sending works
+   - Tool orchestration functions
+   - Conversation history persists
+
+#### Test Suite Structure
+
+```
+e2e/
+├── playwright.config.ts          # Playwright configuration
+├── tests/
+│   ├── 01-health.spec.ts        # Health checks & basic page loads
+│   ├── 02-homepage-chat.spec.ts # AI chat on homepage
+│   ├── 03-roadmap.spec.ts       # Roadmap viewing
+│   ├── 04-learning.spec.ts      # Learning entries
+│   ├── 05-api-endpoints.spec.ts # Backend API validation
+│   ├── 06-agent-chat.spec.ts    # Agent service (if ready)
+│   └── 07-mobile.spec.ts        # Mobile responsive tests
+├── fixtures/
+│   └── test-data.ts             # Shared test data
+├── utils/
+│   └── helpers.ts               # Helper functions
+└── reports/                      # Test reports (generated)
+    ├── html/
+    ├── json/
+    └── screenshots/
+```
+
+#### Automated Failure Reports
+
+**Report Features**:
+1. **Test Execution Summary**
+   - Total tests run
+   - Passed/Failed/Skipped counts
+   - Execution time
+   - Browser/device matrix
+
+2. **Failure Details** (for each failed test):
+   - Test name and file path
+   - Error message and stack trace
+   - Screenshot at failure moment
+   - Video recording of test execution
+   - Network logs (failed API calls)
+   - Console errors from browser
+
+3. **Regression Detection**:
+   - Compare with previous test runs
+   - Identify new failures vs known issues
+   - Track flaky tests (intermittent failures)
+
+4. **Auto-Generated Repair Suggestions**:
+   - API endpoint changes (404/500 errors)
+   - Missing DOM elements (selector not found)
+   - Timing issues (timeout errors)
+   - Environment problems (service not running)
+
+#### Implementation Steps
+
+**Phase 1: Setup (30 minutes)**
+```bash
+# Install Playwright and dependencies
+cd frontend
+npm install -D @playwright/test
+npx playwright install --with-deps
+
+# Create playwright.config.ts
+```
+
+**playwright.config.ts**:
+```typescript
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './e2e/tests',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: [
+    ['html', { outputFolder: 'e2e/reports/html' }],
+    ['json', { outputFile: 'e2e/reports/json/results.json' }],
+    ['junit', { outputFile: 'e2e/reports/junit.xml' }],
+  ],
+  use: {
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+  },
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    { name: 'mobile-chrome', use: { ...devices['Pixel 5'] } },
+  ],
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+  },
+});
+```
+
+**Phase 2: Write Core Tests (60 minutes)**
+
+```typescript
+// e2e/tests/01-health.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('Health Checks', () => {
+  test('homepage loads successfully', async ({ page }) => {
+    await page.goto('/');
+    await expect(page).toHaveTitle(/Henri Haapala/);
+    await expect(page.locator('nav')).toBeVisible();
+  });
+
+  test('backend health check shows ok', async ({ page }) => {
+    await page.goto('/');
+    const healthIndicator = page.locator('text=Backend health:');
+    await expect(healthIndicator).toBeVisible();
+    await expect(page.locator('text=Backend health: ok')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('navigation menu renders', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('a:has-text("Roadmap")')).toBeVisible();
+    await expect(page.locator('a:has-text("Learning")')).toBeVisible();
+  });
+});
+```
+
+```typescript
+// e2e/tests/02-homepage-chat.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('Homepage AI Chat', () => {
+  test('chat interface is present', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('textarea, input[type="text"]').first()).toBeVisible();
+    await expect(page.locator('button:has-text("Ask"), button:has-text("Send")')).toBeVisible();
+  });
+
+  test('sending a message gets AI response', async ({ page }) => {
+    await page.goto('/');
+
+    // Wait for backend health to be ok
+    await expect(page.locator('text=Backend health: ok')).toBeVisible({ timeout: 10000 });
+
+    // Find and fill chat input
+    const chatInput = page.locator('textarea, input[type="text"]').first();
+    await chatInput.fill('What is machine learning?');
+
+    // Click send button
+    await page.locator('button:has-text("Ask"), button:has-text("Send")').click();
+
+    // Wait for AI response (max 15 seconds)
+    await expect(page.locator('.message, .response, [data-testid="ai-response"]').last())
+      .toBeVisible({ timeout: 15000 });
+
+    // Verify response contains text
+    const response = await page.locator('.message, .response, [data-testid="ai-response"]').last().textContent();
+    expect(response).toBeTruthy();
+    expect(response.length).toBeGreaterThan(10);
+  });
+
+  test('error handling for failed chat request', async ({ page }) => {
+    // Intercept API call and force error
+    await page.route('**/api/ai/chat/', route => route.abort());
+
+    await page.goto('/');
+    const chatInput = page.locator('textarea, input[type="text"]').first();
+    await chatInput.fill('Test message');
+    await page.locator('button:has-text("Ask"), button:has-text("Send")').click();
+
+    // Verify error message appears
+    await expect(page.locator('text=Failed, text=error, [data-testid="error-message"]'))
+      .toBeVisible({ timeout: 5000 });
+  });
+});
+```
+
+```typescript
+// e2e/tests/05-api-endpoints.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('Backend API Endpoints', () => {
+  test('GET /api/health/ returns 200', async ({ request }) => {
+    const response = await request.get('http://localhost:8000/api/health/');
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.status).toBe('ok');
+  });
+
+  test('GET /api/roadmap/sections/ returns valid data', async ({ request }) => {
+    const response = await request.get('http://localhost:8000/api/roadmap/sections/');
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(Array.isArray(body)).toBeTruthy();
+  });
+
+  test('POST /api/ai/chat/ accepts questions', async ({ request }) => {
+    const response = await request.post('http://localhost:8000/api/ai/chat/', {
+      data: { question: 'Test question' },
+      headers: { 'Content-Type': 'application/json' },
+    });
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.answer).toBeTruthy();
+  });
+
+  test('GET /agent/health returns healthy', async ({ request }) => {
+    const response = await request.get('http://localhost:8001/health');
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.status).toBe('healthy');
+  });
+});
+```
+
+**Phase 3: Add to CI/CD Pipeline**
+
+Update `.github/workflows/ci.yml`:
+```yaml
+e2e-tests:
+  name: E2E Tests (Playwright)
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+
+    - name: Start Docker services
+      run: docker-compose up -d
+
+    - name: Wait for services
+      run: |
+        timeout 60 sh -c 'until curl -f http://localhost:3000; do sleep 2; done'
+        timeout 60 sh -c 'until curl -f http://localhost:8000/api/health/; do sleep 2; done'
+
+    - name: Install Playwright
+      run: |
+        cd frontend
+        npm ci
+        npx playwright install --with-deps
+
+    - name: Run E2E tests
+      run: |
+        cd frontend
+        npm run test:e2e
+
+    - name: Upload test report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-report
+        path: frontend/e2e/reports/
+
+    - name: Upload failure screenshots
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: failure-screenshots
+        path: frontend/test-results/
+```
+
+**Phase 4: Automated Repair Workflow**
+
+Create `e2e/utils/failure-analyzer.ts`:
+```typescript
+import { TestResult } from '@playwright/test/reporter';
+
+export function analyzeFailure(result: TestResult): RepairSuggestion {
+  const error = result.error?.message || '';
+
+  // API endpoint failures
+  if (error.includes('404') || error.includes('500')) {
+    return {
+      type: 'API_ERROR',
+      suggestion: 'Check if backend service is running and endpoint exists',
+      fix: 'Verify docker-compose services are healthy',
+    };
+  }
+
+  // Selector not found
+  if (error.includes('locator') || error.includes('not found')) {
+    return {
+      type: 'SELECTOR_ERROR',
+      suggestion: 'DOM element changed or not rendering',
+      fix: 'Check if component structure changed in recent commits',
+    };
+  }
+
+  // Timeout errors
+  if (error.includes('timeout')) {
+    return {
+      type: 'TIMEOUT_ERROR',
+      suggestion: 'Operation took longer than expected',
+      fix: 'Check if API response is slow or service is down',
+    };
+  }
+
+  return {
+    type: 'UNKNOWN',
+    suggestion: 'Manual investigation needed',
+    fix: 'Review error message and stack trace',
+  };
+}
+```
+
+**Phase 5: Report Dashboard**
+
+Add to `package.json`:
+```json
+{
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report e2e/reports/html",
+    "test:e2e:debug": "playwright test --debug"
+  }
+}
+```
+
+#### Success Criteria
+
+✅ **Tests pass consistently** (< 5% flakiness)
+✅ **Fast execution** (< 5 minutes for full suite)
+✅ **Clear failure reports** (screenshot + video + logs)
+✅ **CI/CD integrated** (blocks deployment on failures)
+✅ **Easy to debug** (trace viewer for failures)
+✅ **Cross-browser coverage** (Chrome, Firefox, Safari)
+✅ **Mobile responsive tests** (phone and tablet sizes)
+
+#### Maintenance Plan
+
+- **Weekly**: Review flaky tests, update selectors
+- **Per PR**: Run affected E2E tests only
+- **Pre-deployment**: Run full E2E suite
+- **Post-deployment**: Run smoke tests in production
+- **Monthly**: Update Playwright and dependencies
+
+#### Benefits
+
+🚀 **Catch regressions early** - Before they reach production
+🐛 **Faster debugging** - Screenshots + videos + logs
+📊 **Quality metrics** - Track test coverage over time
+🔄 **Confidence in deployments** - Automated validation
+💰 **Reduce manual testing** - Save hours per week
+
+---
+
 #### 5. Security & Quality Scans
 
 **SAST (Static Application Security Testing)**:
