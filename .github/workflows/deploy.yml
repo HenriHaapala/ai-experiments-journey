@@ -155,26 +155,41 @@ jobs:
         run: |
           echo "🔍 Verifying deployment..."
 
-          # Wait for services to fully start
-          sleep 10
+          # Wait for service with timeout and retries (production-grade health check)
+          wait_for_service() {
+            local url=$1
+            local name=$2
+            local timeout=300  # 5 minutes total timeout
+            local interval=10  # Check every 10 seconds
+            local elapsed=0
 
-          # Check frontend
-          if curl -f -s -o /dev/null -w "%{http_code}" $SITE_URL | grep -q "200\|301\|302"; then
-            echo "✅ Frontend is responding"
-          else
-            echo "❌ Frontend health check failed"
-            exit 1
-          fi
+            echo "⏳ Waiting for $name to become healthy..."
 
-          # Check backend API
-          if curl -f -s -o /dev/null -w "%{http_code}" $SITE_URL/api/health/ | grep -q "200"; then
-            echo "✅ Backend API is responding"
-          else
-            echo "❌ Backend API health check failed"
-            exit 1
-          fi
+            while [ $elapsed -lt $timeout ]; do
+              status=$(curl -f -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || echo "000")
 
-          echo "🎉 All health checks passed!"
+              if echo "$status" | grep -q "200\|301\|302"; then
+                echo "✅ $name is healthy (HTTP $status) - took ${elapsed}s"
+                return 0
+              fi
+
+              echo "   ⏳ $name not ready yet (HTTP $status) - waiting... (${elapsed}/${timeout}s)"
+              sleep $interval
+              elapsed=$((elapsed + interval))
+            done
+
+            echo "❌ $name failed to become healthy after ${timeout}s (last status: HTTP $status)"
+            return 1
+          }
+
+          # Check all services (fail fast if any service fails)
+          wait_for_service "$SITE_URL" "Frontend" || exit 1
+          wait_for_service "$SITE_URL/api/health/" "Backend API" || exit 1
+          wait_for_service "$SITE_URL/agent/health" "Agent Service" || exit 1
+
+          echo ""
+          echo "🎉 All services are healthy and responding!"
+          echo "🌐 Site: $SITE_URL"
 
       - name: Cleanup SSH key
         if: always()
