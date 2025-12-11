@@ -134,6 +134,159 @@ PostgreSQL (Internal network only)
 ### Vector Search
 The application uses pgvector for semantic similarity search across learning content, enabling AI-powered content retrieval.
 
+## API Endpoints
+
+The application provides two separate chat/AI systems with distinct purposes:
+
+### 1. Django RAG Chat API (`/api/ai/chat/`)
+
+**Purpose**: RAG-based question answering using semantic search over learning entries
+
+**Endpoint**: `POST /api/ai/chat/`
+
+**Technology Stack**:
+- Cohere `embed-english-v3.0` for query embedding (1024 dimensions)
+- pgvector for semantic similarity search via `smart_retrieve()`
+- Groq `llama-3.3-70b-versatile` for answer generation
+- Django REST Framework
+
+**Request**:
+```json
+{
+  "question": "What have I learned about neural networks?"
+}
+```
+
+**Response**:
+```json
+{
+  "answer": "Based on your learning entries...",
+  "question": "What have I learned about neural networks?",
+  "context_used": [
+    {
+      "id": 42,
+      "source_type": "learning_entry",
+      "title": "Neural Networks Basics",
+      "content": "...",
+      "section_title": "Machine Learning",
+      "roadmap_item_title": "Deep Learning Fundamentals"
+    }
+  ],
+  "confidence": 0.85,
+  "retrieval_debug": {
+    "status": "ok",
+    "top_score": 0.85,
+    "candidate_count": 5
+  },
+  "follow_up_questions": [
+    "How do backpropagation algorithms work?",
+    "What are activation functions?"
+  ]
+}
+```
+
+**Features**:
+- Confidence scoring with hallucination detection
+- Smart retrieval with fallback strategies
+- Context transparency (shows which learning entries were used)
+- Follow-up question suggestions
+- Supports low confidence warnings (< 0.25)
+
+**Frontend Integration**: Embedded in homepage hero section (`frontend/app/page.tsx`)
+
+**Use Case**: User asks questions about their own learning progress and portfolio content
+
+---
+
+### 2. Agent Service API (`/agent/api/chat`)
+
+**Purpose**: Intelligent agent with autonomous tool orchestration and multi-step reasoning
+
+**Endpoint**: `POST /agent/api/chat`
+
+**Technology Stack**:
+- LangChain for agent orchestration
+- Groq `llama-3.3-70b-versatile` for reasoning
+- Model Context Protocol (MCP) tools integration
+- Redis for conversation memory
+- FastAPI
+
+**Request**:
+```json
+{
+  "message": "What should I learn next after completing neural networks?",
+  "conversation_id": "conv_12345"
+}
+```
+
+**Response**:
+```json
+{
+  "response": "Based on your progress, I recommend moving to...",
+  "conversation_id": "conv_12345",
+  "timestamp": "2025-12-10T10:05:31.342591"
+}
+```
+
+**Available MCP Tools** (Agent can use automatically):
+1. `get_roadmap` - Get complete AI Career Roadmap structure
+2. `get_learning_entries` - Retrieve learning log entries
+3. `search_knowledge` - Semantic search across all portfolio knowledge
+4. `add_learning_entry` - Create new learning log entries
+5. `get_progress_stats` - Get portfolio progress metrics
+
+**Features**:
+- Multi-tool chaining (can use multiple tools in sequence)
+- Conversation context preservation (Redis-backed)
+- Natural language understanding
+- Autonomous decision-making about which tools to use
+- Proactive suggestions and reminders
+
+**Frontend Integration**: Not yet integrated (agent service ready, needs UI component)
+
+**Use Case**: More complex queries requiring reasoning, planning, and multi-step operations
+
+---
+
+### 3. Other Django REST Endpoints
+
+**Roadmap**:
+- `GET /api/roadmap/sections/` - List all roadmap sections
+- `GET /api/roadmap/sections/{id}/` - Get section details with items
+
+**Learning Entries**:
+- `GET /api/learning/entries/` - List learning entries (public + authenticated user's private)
+- `POST /api/learning/entries/` - Create new learning entry (requires auth)
+- `GET /api/learning/entries/{id}/` - Get specific entry
+
+**Health Check**:
+- `GET /api/health/` - Backend health status
+- `GET /agent/health` - Agent service health status
+
+---
+
+### API Architecture Summary
+
+```
+Frontend (Next.js)
+    ↓
+┌─────────────────────────────────────────────────────────────┐
+│                                                               │
+│  Django Backend (port 8000)         Agent Service (port 8001)│
+│  - /api/ai/chat/  (RAG)             - /agent/api/chat       │
+│  - /api/roadmap/                    - /agent/health          │
+│  - /api/learning/                   - /agent/api/tools       │
+│  - /api/health/                                              │
+│                                                               │
+└─────────────────────────────────────────────────────────────┘
+    ↓                                   ↓
+PostgreSQL + pgvector              Redis (memory)
+```
+
+**Key Difference**:
+- **Django RAG Chat**: Fast, focused semantic search over existing content
+- **Agent Service**: Intelligent, multi-step reasoning with tool orchestration
+
 ## Development Setup
 
 ### Docker (Recommended - Production Ready)
