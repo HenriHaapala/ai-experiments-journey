@@ -93,11 +93,13 @@ Use the following format:
 Question: the input question or task
 Thought: you should always think about what to do
 Action: the action to take, should be one of [{tool_names}]
-Action Input: the input to the action (must be valid JSON)
+Action Input: JSON object with the tool parameters. Example for add_learning_entry: {{"title": "Docker Deployment", "content": "Learned about Docker", "is_public": true}}
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat N times)
 Thought: I now know the final answer
 Final Answer: the final answer to the original input question/task
+
+CRITICAL: Action Input must be a JSON object with individual fields, NOT a JSON string inside a field.
 
 Begin!
 
