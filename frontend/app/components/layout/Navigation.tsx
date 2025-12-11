@@ -19,7 +19,7 @@ export default function Navigation() {
           {[
             { href: "/", label: "Home" },
             { href: "/roadmap", label: "Roadmap" },
-            { href: "/learning", label: "Learning Log" }
+            { href: "/learning", label: "MCP Learning Log" }
           ].map(({ href, label }) => (
             <Link
               key={href}

@@ -9,6 +9,9 @@
     "lint": "eslint",
     "format": "biome format --write .",
     "check": "biome check --write .",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "security:frontend": "npm audit --audit-level=moderate",
     "security:secrets": "gitleaks detect --source . --verbose",
     "security:sast": "semgrep --config=../.semgrep.yml --json --output=semgrep-report.json .",
@@ -22,11 +25,17 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/jest": "^29.5.14",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.0.5",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
