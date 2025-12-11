@@ -78,9 +78,26 @@ jobs:
             git fetch origin
             git reset --hard origin/main
 
+            # Ensure backups directory exists
+            mkdir -p ~/backups
+
+            # Ensure NEXT_PUBLIC_API_BASE_URL is set in .env for production
+            if ! grep -q "NEXT_PUBLIC_API_BASE_URL" .env; then
+              echo "➕ Adding NEXT_PUBLIC_API_BASE_URL to .env..."
+              echo "NEXT_PUBLIC_API_BASE_URL=https://wwwportfolio.henrihaapala.com" >> .env
+            fi
+
             # Backup database before deployment (safety measure)
             echo "💾 Creating database backup..."
             docker-compose exec -T postgres pg_dump -U aiportfolio aiportfolio > ~/backups/pre-deploy-$(date +%Y%m%d-%H%M%S).sql || echo "⚠️ Backup failed (non-critical)"
+
+            # Stop and remove old containers first
+            echo "🛑 Stopping and removing old containers..."
+            docker-compose down --remove-orphans
+
+            # Force remove any stuck containers
+            echo "🧹 Cleaning up stuck containers..."
+            docker ps -a | grep aiportfolio | awk '{print $1}' | xargs -r docker rm -f || echo "No stuck containers"
 
             # Pull latest Docker images
             echo "📦 Pulling Docker images..."
@@ -89,10 +106,6 @@ jobs:
             # Rebuild services (to pick up code changes)
             echo "🔨 Rebuilding Docker images..."
             docker-compose build --no-cache
-
-            # Stop containers gracefully
-            echo "🛑 Stopping old containers..."
-            docker-compose down
 
             # Start new containers
             echo "🚀 Starting new containers..."
