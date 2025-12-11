@@ -111,13 +111,21 @@ jobs:
             echo "🚀 Starting new containers..."
             docker-compose up -d
 
-            # Wait for services to be healthy
-            echo "⏳ Waiting for services to start..."
-            sleep 15
+            # Wait for postgres
+            echo "⏳ Waiting for PostgreSQL..."
+            sleep 10
 
-            # Run database migrations (if any)
+            # Install pgvector extension
+            echo "🔧 Installing pgvector extension..."
+            docker-compose exec -T postgres psql -U aiportfolio aiportfolio -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+            # Wait for backend
+            echo "⏳ Waiting for backend..."
+            sleep 10
+
+            # Run database migrations
             echo "🗃️ Running database migrations..."
-            docker-compose exec -T backend python manage.py migrate --noinput || echo "⚠️ Migration warning (might be expected)"
+            docker-compose exec -T backend python manage.py migrate --noinput
 
             # Collect static files (if needed)
             echo "📦 Collecting static files..."
