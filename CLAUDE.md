@@ -1,5 +1,20 @@
 # CLAUDE.md
 
+---
+## 🚨 CRITICAL RULE FOR AI ASSISTANTS 🚨
+
+**MANDATORY: ALWAYS READ THIS FILE FIRST**
+- At the start of EVERY new conversation, read CLAUDE.md COMPLETELY before doing anything else
+- This file contains essential project context, architecture, existing infrastructure, and operating rules
+- Never assume you know the project state - always verify by reading this file first
+- Check what already exists (tests, tools, configurations) before creating duplicates
+- Understand the technology stack (Groq + Cohere, NOT OpenAI) before making changes
+- Follow the testing strategy and CI/CD pipeline documented below
+
+**If you don't read this file first, you WILL make mistakes.**
+
+---
+
 ## Project Overview
 
 This is an AI-powered portfolio application that tracks learning journey progress through a roadmap system with RAG (Retrieval-Augmented Generation) capabilities. The project consists of a Django REST backend with PostgreSQL + pgvector for semantic search, and a Next.js frontend.
@@ -781,6 +796,50 @@ ai-portfolio/
 - Python 3.11
 
 ## Testing & CI/CD Strategy
+
+### Current Status (December 11, 2025)
+
+**✅ Infrastructure Ready:**
+- Lefthook 1.10.3 installed for Git hooks
+- Pre-commit hooks: Gitleaks (secrets), Biome (frontend), Ruff (backend)
+- Test scripts defined in `package.json`
+- CI/CD pipeline configured in `.github/workflows/ci.yml`
+
+**❌ Tests Not Yet Written:**
+- `backend/tests/` directory doesn't exist
+- `frontend/__tests__/` directory doesn't exist
+- `agent_service/tests/` directory doesn't exist
+- `e2e/tests/` directory doesn't exist
+- Pre-push hook expects `pytest` but no real tests exist yet
+
+**📋 Priority:** Implement tests after Phase 3 completion (agent routing fixed)
+
+**📝 Implementation Plan** (from TESTING_TODO.md):
+
+**Step 1: Backend Tests** (Highest priority - 2 hours)
+- Install: `cd backend && pip install pytest pytest-django pytest-cov`
+- Create `backend/tests/test_models.py` - Test database models
+- Create `backend/tests/test_api.py` - Test all API endpoints
+- Create `backend/tests/conftest.py` - Test fixtures
+- Write 5-10 basic tests for models and API
+- Run: `cd backend && pytest -v`
+
+**Step 2: Frontend Tests** (Medium priority - 1 hour)
+- Install: `cd frontend && npm install --save-dev jest @testing-library/react @testing-library/jest-dom`
+- Create `frontend/__tests__/Navigation.test.tsx`
+- Create `frontend/jest.config.js`
+- Write 3-5 tests for critical components
+- Run: `cd frontend && npm test`
+
+**Step 3: Agent Tests** (Lower priority - 1 hour)
+- Install: `cd agent_service && pip install pytest pytest-asyncio pytest-cov`
+- Create `agent_service/tests/test_api.py` - FastAPI endpoints
+- Create `agent_service/tests/test_mcp_tools.py` - Tool integration
+- Run: `cd agent_service && pytest -v`
+
+**Total Estimated Time:** 3-4 hours
+
+**Note:** Pre-push hook in `lefthook.yml` already configured to run `pytest --maxfail=1 --disable-warnings -q` before push. Will work once tests are created!
 
 ### Overview
 Production-grade testing infrastructure with automated quality gates and continuous integration. Demonstrates industry best practices for modern web applications.
@@ -1564,6 +1623,46 @@ npm install --save-dev lefthook
 - 🎯 All tools from 2023-2025, built for modern development
 - 🚀 Pre-commit checks complete in <1 second instead of 10+ seconds
 
+### What Runs Automatically (from TESTING_SETUP.md)
+
+**On Every Commit** (via Lefthook pre-commit hook):
+1. **Secrets Detection** (Gitleaks) - Priority 1
+   - Scans staged files for API keys, passwords, tokens
+   - **Blocks commit if secrets found**
+2. **Frontend Linting** (Biome) - Priority 2
+   - Checks TypeScript/JavaScript/JSON files
+   - Auto-fixes formatting issues
+3. **Python Formatting** (Ruff) - Priority 2
+   - Formats Python code
+   - Auto-fixes common issues
+4. **Python Linting** (Ruff) - Priority 3
+   - Checks code quality
+   - Replaces flake8, isort, pyupgrade
+
+**Before Push** (via Lefthook pre-push hook):
+- Backend tests (`pytest --maxfail=1 --disable-warnings -q`)
+- Full secrets scan (Gitleaks)
+
+**Manual Commands:**
+```bash
+# Install/reinstall hooks
+npm run hooks:install
+
+# Run pre-commit checks manually
+npm run hooks:run
+
+# Skip hooks (use sparingly!)
+git commit --no-verify -m "message"
+LEFTHOOK_EXCLUDE=biome-check git commit -m "Skip Biome"
+```
+
+**Configuration Files:**
+- `lefthook.yml` - Hook configuration
+- `ruff.toml` - Python linting/formatting rules
+- `biome.json` - Frontend linting/formatting rules
+- `.gitleaks.toml` - Secrets detection rules
+- `.semgrep.yml` - SAST security rules
+
 ### Continuous Integration (GitHub Actions)
 
 **Workflow**: `.github/workflows/ci.yml`
@@ -2155,3 +2254,220 @@ frontend/
 ├── utils/                        # Utility functions
 └── types/                        # TypeScript types
 ```
+
+---
+
+## Setup Guides (Detailed)
+
+### Docker Setup (from DOCKER_SETUP.md)
+
+**Quick Start:**
+```bash
+# 1. Copy environment template
+cp .env.example .env
+
+# 2. Edit .env with your API keys
+# COHERE_API_KEY, GROQ_API_KEY, DJANGO_SECRET_KEY, DB_PASSWORD
+
+# 3. Build and start
+docker-compose up --build
+
+# 4. Verify services
+# Frontend: http://localhost:3000
+# Backend: http://localhost:8000/api/health/
+# Adminer: http://localhost:8080
+```
+
+**Common Commands:**
+```bash
+docker-compose up -d              # Start in background
+docker-compose down               # Stop all services
+docker-compose logs -f backend    # View logs
+docker-compose exec backend python manage.py migrate  # Run migrations
+```
+
+**Security Checklist:**
+- ✅ `.env` is in `.gitignore`
+- ✅ Never commit API keys
+- ✅ Use strong DB_PASSWORD
+- ✅ Rotate DJANGO_SECRET_KEY for production
+
+**Troubleshooting:**
+- **Database connection failed**: Wait ~10s for postgres healthcheck
+- **Port already in use**: Change ports in docker-compose.yml
+- **Frontend can't connect**: Verify NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+
+See [DOCKER_SETUP.md](DOCKER_SETUP.md) for complete guide.
+
+---
+
+### HTTPS Setup (from HTTPS_SETUP.md)
+
+**Prerequisites:**
+- Oracle Cloud instance running
+- DNS configured (domain → server IP)
+- Docker containers running
+- SSH access
+
+**Quick Setup:**
+```bash
+# 1. SSH into server
+ssh -i ~/.ssh/key.pem ubuntu@your-server-ip
+
+# 2. Install nginx and certbot
+sudo apt update
+sudo apt install -y nginx certbot python3-certbot-nginx
+
+# 3. Configure Oracle firewall (Security List)
+# Add Ingress Rule: Port 443, Source 0.0.0.0/0
+
+# 4. Allow HTTPS on Ubuntu firewall
+sudo ufw allow 443/tcp
+sudo ufw allow 'Nginx Full'
+
+# 5. Create nginx config
+sudo nano /etc/nginx/sites-available/aiportfolio
+```
+
+**nginx Configuration:**
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    # Frontend
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Backend API
+    location /api/ {
+        proxy_pass http://localhost:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Agent Service
+    location /agent/ {
+        proxy_pass http://localhost:8001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+**Enable SSL with Let's Encrypt:**
+```bash
+# Enable site
+sudo ln -s /etc/nginx/sites-available/aiportfolio /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+
+# Get SSL certificate (automated)
+sudo certbot --nginx -d your-domain.com
+
+# Verify auto-renewal
+sudo certbot renew --dry-run
+```
+
+**Result**: HTTPS enabled with automatic renewal!
+
+See [HTTPS_SETUP.md](HTTPS_SETUP.md) for complete guide.
+
+---
+
+### CI/CD Setup (from CI_CD_SETUP.md)
+
+**GitHub Actions Deployment Pipeline:**
+
+**Setup Steps:**
+1. Generate SSH key on server: `ssh-keygen -t ed25519 -C "github-actions"`
+2. Add public key to `~/.ssh/authorized_keys`
+3. Add secrets to GitHub repo settings:
+   - `DEPLOY_SSH_KEY` - Private key
+   - `DEPLOY_HOST` - Server IP
+   - `DEPLOY_USER` - ubuntu
+   - `GROQ_API_KEY`, `COHERE_API_KEY`, etc.
+
+**Workflow** (`.github/workflows/deploy.yml`):
+```yaml
+name: Deploy to Production
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Oracle Cloud
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ~/ai-portfolio
+            git pull origin main
+            docker-compose down
+            docker-compose up -d --build
+```
+
+**Features:**
+- ✅ Push to main → Auto-deploy (10 min)
+- ✅ Professional health checks (5min timeout)
+- ✅ Automatic database backups
+- ✅ Zero-downtime deployment
+- ✅ pgvector auto-installation
+
+See [CI_CD_SETUP.md](CI_CD_SETUP.md) for complete guide.
+
+---
+
+### Security Setup (from SECURITY_SETUP.md)
+
+**Pre-commit Security Checks:**
+
+**Tools Installed:**
+1. **Gitleaks** - Secrets detection (blocks commits with API keys)
+2. **Semgrep** - SAST (Static Application Security Testing)
+3. **Bandit** - Python security linting
+4. **npm audit** - Node.js dependency scanning
+5. **Safety** - Python dependency vulnerabilities
+
+**Configuration:**
+- `.gitleaks.toml` - Secrets detection rules
+- `.semgrep.yml` - SAST security rules
+- `lefthook.yml` - Pre-commit hook (runs Gitleaks automatically)
+
+**Manual Security Scans:**
+```bash
+# Run all security scans
+npm run security:all
+
+# Individual scans
+npm run security:secrets   # Gitleaks
+npm run security:backend   # Bandit + Safety
+npm run security:frontend  # npm audit
+npm run security:sast      # Semgrep
+```
+
+**Automatic Protection:**
+- Every commit scanned for secrets (Gitleaks via Lefthook)
+- CI/CD pipeline runs full security suite
+- Blocks deployment if critical vulnerabilities found
+
+**Security Checklist:**
+- ✅ Never commit `.env` files
+- ✅ Use `.env.example` with placeholders only
+- ✅ Rotate secrets regularly
+- ✅ Keep dependencies updated
+- ✅ Review security scan results
+
+See [SECURITY_SETUP.md](SECURITY_SETUP.md) for complete guide.
+
+---
+
