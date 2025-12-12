@@ -99,17 +99,22 @@ jobs:
             echo "🧹 Cleaning up stuck containers..."
             docker ps -a | grep aiportfolio | awk '{print $1}' | xargs -r docker rm -f || echo "No stuck containers"
 
+            # NUCLEAR OPTION: Remove ALL Docker cache to force complete rebuild
+            echo "💥 Removing ALL Docker build cache..."
+            docker builder prune -af
+            docker system prune -af --volumes
+
             # Pull latest Docker images
             echo "📦 Pulling Docker images..."
             docker-compose pull
 
-            # Rebuild services (to pick up code changes)
-            echo "🔨 Rebuilding Docker images..."
-            docker-compose build --no-cache
+            # Rebuild services with no cache AND pull base images
+            echo "🔨 Rebuilding Docker images (no cache, forced)..."
+            docker-compose build --no-cache --pull
 
-            # Start new containers
-            echo "🚀 Starting new containers..."
-            docker-compose up -d
+            # Start new containers with force recreate
+            echo "🚀 Starting new containers (force recreate)..."
+            docker-compose up -d --force-recreate
 
             # Wait for postgres
             echo "⏳ Waiting for PostgreSQL..."
@@ -143,8 +148,9 @@ jobs:
             echo "🔍 Testing frontend..."
             curl -f http://localhost:3000 || echo "⚠️ Frontend health check failed"
 
-            # Reload nginx to pick up any config changes
-            echo "🔄 Reloading nginx..."
+            # Reload nginx and clear cache
+            echo "🔄 Reloading nginx and clearing cache..."
+            sudo rm -rf /var/cache/nginx/* || echo "No nginx cache to clear"
             sudo nginx -t && sudo systemctl reload nginx
 
             echo "🎉 Deployment completed successfully!"
