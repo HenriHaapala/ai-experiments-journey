@@ -66,7 +66,8 @@ jobs:
           SSH_USER: ${{ secrets.OCI_USER }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << 'ENDSSH'
-            set -e  # Exit on any error
+            set -e  # Exit on critical errors only (we handle non-critical ones with ||)
+            set -x  # Print each command for debugging
 
             echo "🚀 Starting deployment..."
 
