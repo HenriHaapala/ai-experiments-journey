@@ -38,7 +38,7 @@ services:
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
       - COHERE_EMBED_MODEL=embed-english-v3.0
       - GROQ_MODEL=llama-3.3-70b-versatile
-      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - GITHUB_WEBHOOK_SECRET=${AI_PORTFOLIO_WEBHOOK_SECRET}
     depends_on:
       postgres:
         condition: service_healthy
