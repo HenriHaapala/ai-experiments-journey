@@ -23,4 +23,5 @@ urlpatterns = [
     path("api/health/", health),
     path("api/", include("portfolio.urls")),
     path("api/mcp/", include("mcp_server.urls")),
+    path("api/automation/", include("automation.urls")),
 ]

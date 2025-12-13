@@ -7,6 +7,9 @@ from django.urls import reverse
 from rest_framework import status
 from portfolio.models import RoadmapSection, RoadmapItem, LearningEntry, KnowledgeChunk
 import numpy as np
+import hmac
+import hashlib
+import json
 
 
 @pytest.mark.django_db
@@ -121,6 +124,66 @@ class TestLearningEntryAPI:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
         assert response.data[0]["title"] == "Entry 1"
+
+
+@pytest.mark.django_db
+class TestAutomationWebhook:
+    """Test GitHub webhook endpoint creates learning entries"""
+
+    def _sign_payload(self, secret: str, payload: dict) -> str:
+        body = json.dumps(payload).encode("utf-8")
+        digest = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+        return f"sha256={digest}", body
+
+    def test_push_event_creates_entry_and_dedupes(self, api_client, settings, roadmap_item):
+        # Configure secret for signature verification
+        settings.GITHUB_WEBHOOK_SECRET = "test-secret"
+
+        payload = {
+            "ref": "refs/heads/main",
+            "repository": {"full_name": "henri/ai-portfolio"},
+            "compare": "https://github.com/henri/ai-portfolio/compare/abc...def",
+            "commits": [
+                {
+                    "id": "abc123456789",
+                    "message": "Improve roadmap item matching",
+                    "url": "https://github.com/henri/ai-portfolio/commit/abc123",
+                    "author": {"name": "Henri"},
+                }
+            ],
+        }
+
+        sig_header, body = self._sign_payload(settings.GITHUB_WEBHOOK_SECRET, payload)
+
+        # First delivery should create an entry
+        response = api_client.post(
+            "/api/automation/github-webhook/",
+            data=body,
+            content_type="application/json",
+            HTTP_X_HUB_SIGNATURE_256=sig_header,
+            HTTP_X_GITHUB_EVENT="push",
+            HTTP_X_GITHUB_DELIVERY="delivery-123",
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.json()["created"] == 1
+        assert LearningEntry.objects.count() == 1
+        entry = LearningEntry.objects.first()
+        assert "GitHub Delivery ID: delivery-123" in entry.content
+
+        # Duplicate delivery should be skipped
+        response_dup = api_client.post(
+            "/api/automation/github-webhook/",
+            data=body,
+            content_type="application/json",
+            HTTP_X_HUB_SIGNATURE_256=sig_header,
+            HTTP_X_GITHUB_EVENT="push",
+            HTTP_X_GITHUB_DELIVERY="delivery-123",
+        )
+
+        assert response_dup.status_code == status.HTTP_200_OK
+        assert response_dup.json()["skipped"] == 1
+        assert LearningEntry.objects.count() == 1
 
     def test_limit_learning_entries(self, api_client, roadmap_item):
         """Test limit query parameter"""

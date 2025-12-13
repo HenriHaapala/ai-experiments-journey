@@ -44,15 +44,17 @@
 POST /api/automation/github-webhook
 ```
 
+**Documentation**: See `backend/automation/README.md` first for setup and behavior.
+
 **Implementation Tasks:**
-- [ ] Create `backend/automation/` directory
-- [ ] Create `backend/automation/__init__.py`
-- [ ] Create `backend/automation/github_webhook.py` - Webhook receiver endpoint
-- [ ] Create `backend/automation/parsers.py` - Parse commit messages, PR descriptions, file changes
-- [ ] Create `backend/automation/tasks.py` - Background task queue (APScheduler)
-- [ ] Add webhook signature verification (HMAC)
+- [x] Create `backend/automation/` directory
+- [x] Create `backend/automation/__init__.py`
+- [x] Create `backend/automation/github_webhook.py` - Webhook receiver endpoint
+- [x] Create `backend/automation/parsers.py` - Parse commit messages, PR descriptions, file changes
+- [x] Create `backend/automation/tasks.py` - Background task queue (APScheduler)
+- [x] Add webhook signature verification (HMAC)
 - [ ] Integrate with LangChain agent for intelligent parsing
-- [ ] Add Django URLs for webhook endpoint
+- [x] Add Django URLs for webhook endpoint
 - [ ] Test with GitHub webhook testing tools
 
 **Features:**

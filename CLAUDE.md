@@ -509,6 +509,7 @@ Django ORM → PostgreSQL + pgvector
 - `backend/automation/github_webhook.py` - Webhook receiver
 - `backend/automation/parsers.py` - Commit/PR parsing logic
 - `backend/automation/tasks.py` - Background task definitions
+- **Documentation**: Start with `backend/automation/README.md` for setup and behavior details.
 
 #### 4. Additional Automation Ideas
 
@@ -2470,4 +2471,3 @@ npm run security:sast      # Semgrep
 See [SECURITY_SETUP.md](SECURITY_SETUP.md) for complete guide.
 
 ---
-
