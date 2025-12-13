@@ -98,7 +98,7 @@ jobs:
 
             # Force remove any stuck containers
             echo "🧹 Cleaning up stuck containers..."
-            docker ps -a | grep aiportfolio | awk '{print $1}' | xargs -r docker rm -f || echo "No stuck containers"
+            (docker ps -a | grep aiportfolio || true) | awk '{print $1}' | xargs -r docker rm -f || true
 
             # NUCLEAR OPTION: Remove ALL Docker cache to force complete rebuild
             echo "💥 Removing ALL Docker build cache..."
