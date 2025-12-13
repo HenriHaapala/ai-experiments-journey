@@ -79,20 +79,11 @@ jobs:
             git fetch origin
             git reset --hard origin/main
 
-            # Ensure backups directory exists
-            mkdir -p ~/backups
-
             # Ensure NEXT_PUBLIC_API_BASE_URL is set in .env for production
             if ! grep -q "NEXT_PUBLIC_API_BASE_URL" .env; then
               echo "➕ Adding NEXT_PUBLIC_API_BASE_URL to .env..."
               echo "NEXT_PUBLIC_API_BASE_URL=https://wwwportfolio.henrihaapala.com" >> .env
             fi
-
-            # Backup database before deployment (safety measure)
-            echo "💾 Creating database backup..."
-            BACKUP_FILE=~/backups/pre-deploy-$(date +%Y%m%d-%H%M%S).sql
-            (docker-compose exec -T postgres pg_dump -U aiportfolio aiportfolio > "$BACKUP_FILE" 2>&1) || echo "⚠️ Backup failed (non-critical)"
-            echo "   Backup location: $BACKUP_FILE"
 
             # Stop and remove old containers first
             echo "🛑 Stopping and removing old containers..."
