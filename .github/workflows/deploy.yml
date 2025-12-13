@@ -90,7 +90,9 @@ jobs:
 
             # Backup database before deployment (safety measure)
             echo "💾 Creating database backup..."
-            docker-compose exec -T postgres pg_dump -U aiportfolio aiportfolio > ~/backups/pre-deploy-$(date +%Y%m%d-%H%M%S).sql || echo "⚠️ Backup failed (non-critical)"
+            BACKUP_FILE=~/backups/pre-deploy-$(date +%Y%m%d-%H%M%S).sql
+            (docker-compose exec -T postgres pg_dump -U aiportfolio aiportfolio > "$BACKUP_FILE" 2>&1) || echo "⚠️ Backup failed (non-critical)"
+            echo "   Backup location: $BACKUP_FILE"
 
             # Stop and remove old containers first
             echo "🛑 Stopping and removing old containers..."
