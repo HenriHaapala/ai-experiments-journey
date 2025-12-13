@@ -148,13 +148,28 @@ jobs:
             echo "🔍 Testing frontend..."
             curl -f http://localhost:3000 || echo "⚠️ Frontend health check failed"
 
+            # Flush Redis (clear agent conversation cache)
+            echo "🗑️ Flushing Redis cache..."
+            docker-compose exec -T redis redis-cli FLUSHALL || echo "⚠️ Redis flush failed (non-critical)"
+
             # Reload nginx and clear cache
             echo "🔄 Reloading nginx and clearing cache..."
             sudo rm -rf /var/cache/nginx/* || echo "No nginx cache to clear"
             sudo nginx -t && sudo systemctl reload nginx
 
+            # Verify frontend build changed
+            echo "🔍 Verifying frontend build..."
+            BUILD_ID=$(docker-compose exec -T frontend cat /app/.next/BUILD_ID 2>/dev/null || echo "UNKNOWN")
+            echo "   Next.js Build ID: $BUILD_ID"
+
+            # Test cache headers
+            echo "🔍 Testing cache headers..."
+            curl -sI http://localhost:3000 | grep -i "cache-control" || echo "⚠️ No cache-control header from frontend container"
+            curl -skI https://wwwportfolio.henrihaapala.com | grep -i "cache-control" || echo "⚠️ No cache-control header from nginx"
+
             echo "🎉 Deployment completed successfully!"
             echo "🌐 Site: https://wwwportfolio.henrihaapala.com"
+            echo "📦 Build ID: $BUILD_ID"
 
             # Show container status
             echo ""
