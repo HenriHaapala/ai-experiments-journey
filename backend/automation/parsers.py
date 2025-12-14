@@ -8,8 +8,7 @@ def parse_push_event(payload: Dict[str, Any], delivery_id: Optional[str] = None)
     """
     Parse a GitHub push event into a list of learning entry payloads.
 
-    Currently aggregates all commits in the push into a single learning entry to
-    avoid spamming the log.
+    Aggregates all commits in the push into a single learning entry to avoid spamming the log.
     """
     repository = payload.get("repository", {}) or {}
     repo_name = repository.get("full_name") or repository.get("name") or "unknown repository"
@@ -58,6 +57,16 @@ def parse_push_event(payload: Dict[str, Any], delivery_id: Optional[str] = None)
         "content": "\n".join(content_lines),
         "is_public": True,
         "messages": commit_messages,
+        # Extra context for downstream LLM summarization
+        "summary_payload": {
+            "event_type": "push",
+            "delivery_id": delivery_id,
+            "repository": repo_name,
+            "branch": branch,
+            "compare_url": compare_url,
+            "commit_messages": commit_messages,
+            "commit_lines": commit_lines,
+        },
     }
 
     return [entry]
@@ -116,6 +125,19 @@ def parse_pull_request_event(payload: Dict[str, Any], delivery_id: Optional[str]
         "content": "\n".join(content_lines),
         "is_public": True,
         "messages": [title, body] + label_names,
+        "summary_payload": {
+            "event_type": "pull_request",
+            "delivery_id": delivery_id,
+            "repository": repo_name,
+            "title": title,
+            "action": action,
+            "author": user,
+            "base_branch": base_ref,
+            "head_branch": head_ref,
+            "url": html_url,
+            "labels": label_names,
+            "body": body,
+        },
     }
 
     return [entry]
