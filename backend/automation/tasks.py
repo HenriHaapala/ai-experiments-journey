@@ -83,8 +83,10 @@ def _summarize_entry_with_groq(entry: Dict[str, Any]) -> Optional[str]:
     system_prompt = (
         "You turn GitHub events into concise learning log entries focused on what was built or learned. "
         "Use commit messages and change details; surface key tools, frameworks, libraries, and languages when present. "
-        "Do NOT mention repository names, branches, delivery IDs, or the phrase 'GitHub push'. "
-        "Return 1-2 sentences plus 2-4 short bullets. Keep it factual and under 120 words."
+        "Do NOT mention repository names, branches, delivery IDs, commit counts, or authors. "
+        "Do NOT use phrases like 'GitHub push'. "
+        "Return 1-2 sentences plus 2-4 short bullets. Keep it factual and under 120 words. "
+        "Include which roadmap area this likely relates to if you can infer it from the changes."
     )
 
     raw_text = entry.get("content", "")
@@ -125,7 +127,7 @@ def create_learning_entries_from_events(
     a concise AI summary is prepended to the raw event text for the learning log.
     """
     if not entries:
-        return {"created": 0, "skipped": 0, "reason": "no_entries"}
+    return {"created": 0, "skipped": 0, "reason": "no_entries"}
 
     dedup_marker = f"GitHub Delivery ID: {delivery_id}" if delivery_id else None
     if dedup_marker and LearningEntry.objects.filter(content__icontains=dedup_marker).exists():
@@ -143,13 +145,28 @@ def create_learning_entries_from_events(
             content = entry["content"]
 
             if ai_summary:
-                content = f"{ai_summary}\n\n---\nRaw event:\n{content}"
+                content = f"{ai_summary}\n\n---\nRaw event:\n"
 
             # Prefer mapping by Groq summary/raw text; fallback to naive message match
-            roadmap_item_id = _match_roadmap_item_by_text(ai_summary, content) or _guess_roadmap_item_id(messages)
+            roadmap_item_id = (
+                _match_roadmap_item_by_text(ai_summary, content)
+                or _guess_roadmap_item_id(messages)
+            )
+
+            # Compute a nicer title: use roadmap section if matched; else generic update
+            title = entry["title"]
+            if roadmap_item_id:
+                item = RoadmapItem.objects.select_related("section").filter(id=roadmap_item_id).first()
+                if item and item.section:
+                    title = f"{item.section.order}. {item.section.title}"
+                    if ai_summary:
+                        # Append roadmap relation for clarity
+                        content = f"{ai_summary}\n\nRelated to: {item.section.title} > {item.title}\n\n---\nRaw event:\n"
+            elif ai_summary:
+                title = "Learning update"
 
             created_entry = LearningEntry.objects.create(
-                title=entry["title"],
+                title=title,
                 content=content,
                 is_public=entry.get("is_public", True),
                 roadmap_item_id=entry.get("roadmap_item_id") or roadmap_item_id
