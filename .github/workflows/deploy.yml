@@ -116,7 +116,13 @@ jobs:
 
             # Install pgvector extension
             echo "🔧 Installing pgvector extension..."
-            docker-compose exec -T postgres psql -U aiportfolio aiportfolio -c "CREATE EXTENSION IF NOT EXISTS vector;"
+            # Use DB credentials from .env (fallback to defaults if missing)
+            DB_USER=$(grep -m1 '^DB_USER=' .env | cut -d= -f2-)
+            DB_NAME=$(grep -m1 '^DB_NAME=' .env | cut -d= -f2-)
+            DB_USER=${DB_USER:-ai_portfolio_user}
+            DB_NAME=${DB_NAME:-ai_portfolio_dev}
+
+            docker-compose exec -T postgres psql -U "$DB_USER" "$DB_NAME" -c "CREATE EXTENSION IF NOT EXISTS vector;"
 
             # Wait for backend
             echo "⏳ Waiting for backend..."
