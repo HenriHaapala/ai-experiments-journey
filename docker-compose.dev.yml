@@ -1,0 +1,27 @@
+version: "3.9"
+
+# Development configuration with hot-reloading
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+services:
+  frontend:
+    command: npm run dev
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+      # Force polling so Next.js picks up file changes from the host volume (Docker Desktop on Windows/macOS)
+      - WATCHPACK_POLLING=true
+      - WATCHPACK_POLL_INTERVAL=1000
+      - CHOKIDAR_USEPOLLING=true
+      - NEXT_WEBPACK_USEPOLLING=1
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+
+  backend:
+    volumes:
+      - ./backend:/app
+
+  agent:
+    volumes:
+      - ./agent_service:/app

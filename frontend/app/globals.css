@@ -18,6 +18,9 @@
   --color-text-light: #E8E8E8;
   --color-text-gray: #808080;
   --color-bg-nav: rgb(25 15 15 / 0.9);
+
+  /* Custom breakpoint */
+  --breakpoint-custom: 900px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -71,5 +74,26 @@ body {
     width: 60px;
     height: 3px;
     background: linear-gradient(90deg, #CC0000, transparent);
+  }
+
+  /* Custom responsive grid for 900px breakpoint */
+  .grid-responsive-900 {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  @media (min-width: 900px) {
+    .grid-responsive-900 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4rem;
+    }
+    .grid-responsive-900.items-center {
+      align-items: center;
+    }
+    .grid-responsive-900.items-start {
+      align-items: start;
+    }
   }
 }

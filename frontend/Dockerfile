@@ -13,7 +13,7 @@ COPY . .
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 
-# Build Next.js app
+# Build Next.js app for production
 RUN npm run build
 
 # Expose port and start
