@@ -30,6 +30,38 @@ def _guess_roadmap_item_id(messages: List[str]) -> Optional[int]:
     return None
 
 
+def _match_roadmap_item_by_text(summary: Optional[str], raw: str) -> Optional[int]:
+    """
+    Try to map the entry to a roadmap item using the Groq summary (preferred) and raw text.
+    Simple keyword overlap against roadmap item titles/descriptions.
+    """
+    if RoadmapItem.objects.count() == 0:
+        return None
+
+    text = " ".join(
+        t for t in [summary or "", raw] if t
+    ).lower()
+
+    best_id: Optional[int] = None
+    best_score = 0
+
+    for item in RoadmapItem.objects.select_related("section").all():
+        title = (item.title or "").lower()
+        desc = (item.description or "").lower()
+
+        score = 0
+        for token in [title, desc]:
+            if token and token in text:
+                score += len(token)
+
+        if score > best_score:
+            best_score = score
+            best_id = item.id
+
+    # Require a minimal match; otherwise return None
+    return best_id if best_score >= 4 else None
+
+
 def _summarize_entry_with_groq(entry: Dict[str, Any]) -> Optional[str]:
     """
     Use Groq LLM to create a concise learning log summary for a parsed event.
@@ -49,9 +81,10 @@ def _summarize_entry_with_groq(entry: Dict[str, Any]) -> Optional[str]:
         return None
 
     system_prompt = (
-        "You turn GitHub events into concise learning log entries. "
-        "Highlight what was built or learned, mention repo/branch, and keep it factual. "
-        "Return 1-2 sentences followed by 3-6 short bullets. Keep it under 150 words."
+        "You turn GitHub events into concise learning log entries focused on what was built or learned. "
+        "Use commit messages and change details; surface key tools, frameworks, libraries, and languages when present. "
+        "Do NOT mention repository names, branches, delivery IDs, or the phrase 'GitHub push'. "
+        "Return 1-2 sentences plus 2-4 short bullets. Keep it factual and under 120 words."
     )
 
     raw_text = entry.get("content", "")
@@ -61,7 +94,7 @@ def _summarize_entry_with_groq(entry: Dict[str, Any]) -> Optional[str]:
         f"{event_context}\n\n"
         "Raw text prepared for the log:\n"
         f"{raw_text}\n\n"
-        "Produce a concise learning log summary:"
+        "Write the learning-focused summary now (no repo/branch/delivery metadata):"
     )
 
     try:
@@ -103,8 +136,6 @@ def create_learning_entries_from_events(
     for entry in entries:
         messages.extend(entry.get("messages") or [])
 
-    roadmap_item_id = _guess_roadmap_item_id(messages)
-
     created: List[int] = []
     with transaction.atomic():
         for entry in entries:
@@ -113,6 +144,9 @@ def create_learning_entries_from_events(
 
             if ai_summary:
                 content = f"{ai_summary}\n\n---\nRaw event:\n{content}"
+
+            # Prefer mapping by Groq summary/raw text; fallback to naive message match
+            roadmap_item_id = _match_roadmap_item_by_text(ai_summary, content) or _guess_roadmap_item_id(messages)
 
             created_entry = LearningEntry.objects.create(
                 title=entry["title"],
