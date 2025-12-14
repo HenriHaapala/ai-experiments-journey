@@ -127,7 +127,7 @@ def create_learning_entries_from_events(
     a concise AI summary is prepended to the raw event text for the learning log.
     """
     if not entries:
-    return {"created": 0, "skipped": 0, "reason": "no_entries"}
+        return {"created": 0, "skipped": 0, "reason": "no_entries"}
 
     dedup_marker = f"GitHub Delivery ID: {delivery_id}" if delivery_id else None
     if dedup_marker and LearningEntry.objects.filter(content__icontains=dedup_marker).exists():
@@ -145,7 +145,7 @@ def create_learning_entries_from_events(
             content = entry["content"]
 
             if ai_summary:
-                content = f"{ai_summary}\n\n---\nRaw event:\n"
+                content = f"{ai_summary}\n\n---\nRaw event:\n{entry['content']}"
 
             # Prefer mapping by Groq summary/raw text; fallback to naive message match
             roadmap_item_id = (
@@ -161,7 +161,10 @@ def create_learning_entries_from_events(
                     title = f"{item.section.order}. {item.section.title}"
                     if ai_summary:
                         # Append roadmap relation for clarity
-                        content = f"{ai_summary}\n\nRelated to: {item.section.title} > {item.title}\n\n---\nRaw event:\n"
+                        content = (
+                            f"{ai_summary}\n\nRelated to: {item.section.title} > {item.title}"
+                            f"\n\n---\nRaw event:\n{entry['content']}"
+                        )
             elif ai_summary:
                 title = "Learning update"
 
