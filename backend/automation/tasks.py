@@ -142,31 +142,29 @@ def create_learning_entries_from_events(
     with transaction.atomic():
         for entry in entries:
             ai_summary = _summarize_entry_with_groq(entry)
-            content = entry["content"]
-
-            if ai_summary:
-                content = f"{ai_summary}\n\n---\nRaw event:\n{entry['content']}"
 
             # Prefer mapping by Groq summary/raw text; fallback to naive message match
             roadmap_item_id = (
-                _match_roadmap_item_by_text(ai_summary, content)
+                _match_roadmap_item_by_text(ai_summary, entry["content"])
                 or _guess_roadmap_item_id(messages)
             )
 
-            # Compute a nicer title: use roadmap section if matched; else generic update
-            title = entry["title"]
+            # Build title and content
+            title = "Learning update" if ai_summary else entry["title"]
+            content_parts: List[str] = []
+
+            if ai_summary:
+                content_parts.append(ai_summary)
+            else:
+                content_parts.append(entry["content"])
+
             if roadmap_item_id:
                 item = RoadmapItem.objects.select_related("section").filter(id=roadmap_item_id).first()
                 if item and item.section:
                     title = f"{item.section.order}. {item.section.title}"
-                    if ai_summary:
-                        # Append roadmap relation for clarity
-                        content = (
-                            f"{ai_summary}\n\nRelated to: {item.section.title} > {item.title}"
-                            f"\n\n---\nRaw event:\n{entry['content']}"
-                        )
-            elif ai_summary:
-                title = "Learning update"
+                    content_parts.append(f"Related to: {item.section.title} > {item.title}")
+
+            content = "\n\n".join([part for part in content_parts if part.strip()])
 
             created_entry = LearningEntry.objects.create(
                 title=title,
