@@ -26,6 +26,24 @@ type LearningEntry = {
   media: Media[];
 };
 
+type ParsedContent = {
+  summary: string | null;
+  raw: string;
+};
+
+const parseContent = (content: string): ParsedContent => {
+  // Backend appends AI summary like: "<summary>\n\n---\nRaw event:\n<raw>"
+  const marker = "\n---\nRaw event:\n";
+  const idx = content.indexOf(marker);
+  if (idx !== -1) {
+    return {
+      summary: content.slice(0, idx).trim(),
+      raw: content.slice(idx + marker.length).trim(),
+    };
+  }
+  return { summary: null, raw: content };
+};
+
 export default function LearningPage() {
   const [entries, setEntries] = useState<LearningEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,34 +89,46 @@ export default function LearningPage() {
 
           {/* MCP Explanation */}
           <div className="mx-auto max-w-[700px] rounded-lg border border-primary-red/20 bg-black/30 p-4 text-left md:p-6">
-            <h3 className="mb-2 text-base font-semibold text-primary-red md:mb-3 md:text-lg">How MCP Generates Learning Logs</h3>
+            <h3 className="mb-2 text-base font-semibold text-primary-red md:mb-3 md:text-lg">
+              How MCP Generates Learning Logs
+            </h3>
             <p className="mb-2 text-xs leading-relaxed text-text-light md:mb-3 md:text-sm">
               This portfolio uses <strong>Model Context Protocol (MCP)</strong> - a standardized interface that allows AI agents to access and manage my learning data through 5 specialized tools:
             </p>
             <ul className="mb-2 space-y-1.5 text-xs text-text-light md:mb-3 md:space-y-2 md:text-sm">
               <li className="flex items-start gap-2">
                 <span className="text-primary-red">▸</span>
-                <span><strong>get_roadmap</strong> - Fetches my AI learning roadmap structure</span>
+                <span>
+                  <strong>get_roadmap</strong> - Fetches my AI learning roadmap structure
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary-red">▸</span>
-                <span><strong>search_knowledge</strong> - Performs semantic search across all my notes using RAG (Retrieval-Augmented Generation)</span>
+                <span>
+                  <strong>search_knowledge</strong> - Performs semantic search across all my notes using RAG (Retrieval-Augmented Generation)
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary-red">▸</span>
-                <span><strong>add_learning_entry</strong> - Automatically creates new learning log entries</span>
+                <span>
+                  <strong>add_learning_entry</strong> - Automatically creates new learning log entries
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary-red">▸</span>
-                <span><strong>get_learning_entries</strong> - Retrieves my learning history with filters</span>
+                <span>
+                  <strong>get_learning_entries</strong> - Retrieves my learning history with filters
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary-red">▸</span>
-                <span><strong>get_progress_stats</strong> - Tracks my learning progress metrics</span>
+                <span>
+                  <strong>get_progress_stats</strong> - Tracks my learning progress metrics
+                </span>
               </li>
             </ul>
             <p className="text-xs leading-relaxed text-text-gray md:text-sm">
-              A <strong>LangChain-powered agent</strong> orchestrates these tools intelligently - analyzing my GitHub commits, study sessions, and project work to automatically document my learning journey. The agent uses <strong>Groq's Llama 3.3</strong> for reasoning and <strong>Cohere embeddings</strong> for semantic understanding.
+              A <strong>LangChain-powered agent</strong> orchestrates these tools intelligently - analyzing my GitHub commits, study sessions, and project work to automatically document my learning journey. The agent uses <strong>Groq&apos;s Llama 3.3</strong> for reasoning and <strong>Cohere embeddings</strong> for semantic understanding.
             </p>
           </div>
 
@@ -128,74 +158,84 @@ export default function LearningPage() {
 
         {!loading && !error && entries.length > 0 && (
           <div className="flex flex-col gap-6 md:gap-8">
-            {entries.map((entry) => (
-              <Card key={entry.id}>
-                <h2 className="mb-2 text-xl font-bold text-primary-red md:mb-3 md:text-[1.75rem]">
-                  {entry.title}
-                </h2>
+            {entries.map((entry) => {
+              const { summary, raw } = parseContent(entry.content);
+              const contentToShow = summary || raw;
 
-                {(entry.section_title || entry.roadmap_item_title) && (
-                  <div className="mb-3 flex items-center gap-2 text-sm text-text-gray md:mb-4 md:text-[0.95rem]">
-                    <span className="text-primary-red">▸</span>
-                    {entry.section_title && <span>{entry.section_title}</span>}
-                    {entry.section_title && entry.roadmap_item_title && <span>→</span>}
-                    {entry.roadmap_item_title && <span>{entry.roadmap_item_title}</span>}
+              return (
+                <Card key={entry.id}>
+                  <h2 className="mb-2 text-xl font-bold text-primary-red md:mb-3 md:text-[1.75rem]">
+                    {entry.title}
+                  </h2>
+
+                  {(entry.section_title || entry.roadmap_item_title) && (
+                    <div className="mb-3 flex items-center gap-2 text-sm text-text-gray md:mb-4 md:text-[0.95rem]">
+                      <span className="text-primary-red">▸</span>
+                      {entry.section_title && <span>{entry.section_title}</span>}
+                      {entry.section_title && entry.roadmap_item_title && <span>→</span>}
+                      {entry.roadmap_item_title && <span>{entry.roadmap_item_title}</span>}
+                    </div>
+                  )}
+
+                  <div className="mb-2 whitespace-pre-wrap rounded border border-primary-red/20 bg-black/30 p-3 text-sm leading-relaxed text-text-light md:p-4 md:text-base">
+                    {contentToShow}
                   </div>
-                )}
 
-                <div className="mb-4 whitespace-pre-wrap rounded border border-primary-red/10 bg-black/30 p-3 text-sm leading-relaxed text-text-light md:mb-6 md:p-4 md:text-base">
-                  {entry.content}
-                </div>
+                  {summary && (
+                    <div className="mb-4 text-xs text-text-gray md:text-sm">Generated with Groq</div>
+                  )}
 
-                {entry.media.length > 0 && (
-                  <div className="mb-3 rounded border border-primary-red/20 bg-black/30 p-3 md:mb-4 md:p-4">
-                    <h3 className="mb-3 text-sm font-semibold text-primary-red md:mb-4 md:text-base">
-                      Media Attachments
-                    </h3>
-                    <ul className="flex flex-col gap-3 p-0 md:gap-4">
-                      {entry.media.map((m) => (
-                        <li key={m.id} className="list-none">
-                          {m.media_type === "image" ? (
-                            <div>
-                              <img
-                                src={m.url}
-                                alt={m.caption || "Media attachment"}
-                                className="max-w-full rounded border border-primary-red/20"
-                              />
-                              {m.caption && (
-                                <p className="mt-1.5 text-xs italic text-text-gray md:mt-2 md:text-sm">
-                                  {m.caption}
-                                </p>
-                              )}
-                            </div>
-                          ) : (
-                            <a
-                              href={m.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="flex items-center gap-2 rounded bg-primary-red/10 p-2 text-sm text-primary-red no-underline transition-colors hover:bg-primary-red/20"
-                            >
-                              <span>🔗</span>
-                              <span className="truncate">{m.caption || m.url}</span>
-                            </a>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
+                  {entry.media.length > 0 && (
+                    <div className="mb-3 rounded border border-primary-red/20 bg-black/30 p-3 md:mb-4 md:p-4">
+                      <h3 className="mb-3 text-sm font-semibold text-primary-red md:mb-4 md:text-base">
+                        Media Attachments
+                      </h3>
+                      <ul className="flex flex-col gap-3 p-0 md:gap-4">
+                        {entry.media.map((m) => (
+                          <li key={m.id} className="list-none">
+                            {m.media_type === "image" ? (
+                              <div>
+                                <img
+                                  src={m.url}
+                                  alt={m.caption || "Media attachment"}
+                                  className="max-w-full rounded border border-primary-red/20"
+                                />
+                                {m.caption && (
+                                  <p className="mt-1.5 text-xs italic text-text-gray md:mt-2 md:text-sm">
+                                    {m.caption}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <a
+                                href={m.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-2 rounded bg-primary-red/10 p-2 text-sm text-primary-red no-underline transition-colors hover:bg-primary-red/20"
+                              >
+                                <span>[link]</span>
+                                <span className="truncate">{m.caption || m.url}</span>
+                              </a>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="border-t border-primary-red/20 pt-3 text-xs text-text-gray md:pt-4 md:text-sm">
+                    Created:{" "}
+                    {new Date(entry.created_at).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </div>
-                )}
-
-                <div className="border-t border-primary-red/20 pt-3 text-xs text-text-gray md:pt-4 md:text-sm">
-                  Created: {new Date(entry.created_at).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit"
-                  })}
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </section>
