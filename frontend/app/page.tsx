@@ -106,7 +106,7 @@ export default function HomePage() {
 
       {/* Hero Section with Chatbot */}
       <section className="bg-section mx-auto max-w-[1400px] px-4 py-8 md:px-8 md:py-16">
-        <div className="grid-responsive-900 items-center">
+        <div className="grid-responsive-900 items-stretch">
           {/* Left: Name and Title */}
           <div>
             <h1 className="text-gradient-red mb-4 text-[2.5rem] font-black leading-[1.1] tracking-tight md:text-[4rem]">
@@ -126,7 +126,7 @@ export default function HomePage() {
           </div>
 
           {/* Right: Chat Interface */}
-          <div className="bg-card flex max-h-[500px] flex-col rounded-lg border border-primary-red/30 p-8">
+          <Card className="flex h-full min-h-[500px] flex-col">
             <h2 className="mb-3 text-xl font-bold text-primary-red md:mb-4 md:text-2xl">
               Ask My AI Assistant
             </h2>
@@ -207,7 +207,7 @@ export default function HomePage() {
               </div>
               {error && <p className="mt-2 text-sm text-[#f2c14f]">{error}</p>}
             </form>
-          </div>
+          </Card>
         </div>
       </section>
 
