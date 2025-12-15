@@ -48,13 +48,14 @@ def _match_roadmap_item_by_text(summary: Optional[str], raw: str) -> Optional[in
     for item in RoadmapItem.objects.select_related("section").all():
         title = (item.title or "").lower()
         desc = (item.description or "").lower()
+        section_title = (item.section.title if item.section else "") or ""
 
         tokens: List[str] = []
-        for chunk in [title, desc]:
+        for chunk in [title, desc, section_title.lower()]:
             if chunk:
                 tokens.append(chunk)
                 tokens.extend(
-                    [tok for tok in chunk.replace("/", " ").split() if len(tok) >= 4]
+                    [tok for tok in chunk.replace("/", " ").split() if len(tok) >= 3]
                 )
 
         score = sum(len(token) for token in tokens if token and token in text)
