@@ -305,8 +305,6 @@ def _build_content_blocks(
     meta_parts: List[str] = []
     if dedup_marker:
         meta_parts.append(dedup_marker)
-    if entry_content:
-        meta_parts.append(entry_content)
 
     meta_block = ""
     if meta_parts:
