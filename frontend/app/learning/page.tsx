@@ -160,7 +160,7 @@ export default function LearningPage() {
           <div className="flex flex-col gap-6 md:gap-8">
             {entries.map((entry) => {
               const { summary, raw } = parseContent(entry.content);
-              const contentToShow = summary || raw;
+              const contentToShow = summary ?? raw;
 
               return (
                 <Card key={entry.id}>

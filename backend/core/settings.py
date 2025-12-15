@@ -96,6 +96,14 @@ DATABASES = {
     }
 }
 
+# Allow running tests without Postgres by opting into SQLite.
+# Enable with env var USE_SQLITE_FOR_TESTS=1.
+if os.getenv("USE_SQLITE_FOR_TESTS") == "1":
+    DATABASES["default"] = {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "test_db.sqlite3",
+    }
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 

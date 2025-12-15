@@ -4,7 +4,7 @@ Task helpers for automation workflows (e.g., creating learning entries).
 import json
 import logging
 import os
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 
 from django.db import transaction
 from groq import Groq
@@ -38,9 +38,9 @@ def _match_roadmap_item_by_text(summary: Optional[str], raw: str) -> Optional[in
     if RoadmapItem.objects.count() == 0:
         return None
 
-    text = " ".join(
-        t for t in [summary or "", raw] if t
-    ).lower()
+    text = " ".join(t for t in [summary or "", raw] if t).lower()
+    if not text.strip():
+        return None
 
     best_id: Optional[int] = None
     best_score = 0
@@ -49,10 +49,15 @@ def _match_roadmap_item_by_text(summary: Optional[str], raw: str) -> Optional[in
         title = (item.title or "").lower()
         desc = (item.description or "").lower()
 
-        score = 0
-        for token in [title, desc]:
-            if token and token in text:
-                score += len(token)
+        tokens: List[str] = []
+        for chunk in [title, desc]:
+            if chunk:
+                tokens.append(chunk)
+                tokens.extend(
+                    [tok for tok in chunk.replace("/", " ").split() if len(tok) >= 4]
+                )
+
+        score = sum(len(token) for token in tokens if token and token in text)
 
         if score > best_score:
             best_score = score
@@ -81,12 +86,11 @@ def _summarize_entry_with_groq(entry: Dict[str, Any]) -> Optional[str]:
         return None
 
     system_prompt = (
-        "You turn GitHub events into concise learning log entries focused on what was built or learned. "
-        "Use commit messages and change details; surface key tools, frameworks, libraries, and languages when present. "
+        "You write learning-focused summaries of GitHub activity. "
+        "Highlight what was built or learned and call out tools, libraries, frameworks, and languages involved. "
         "Do NOT mention repository names, branches, delivery IDs, commit counts, or authors. "
-        "Do NOT use phrases like 'GitHub push'. "
-        "Return 1-2 sentences plus 2-4 short bullets. Keep it factual and under 120 words. "
-        "Include which roadmap area this likely relates to if you can infer it from the changes."
+        "Avoid phrases like 'GitHub push' or other transport metadata. "
+        "Keep it concise: 1-2 sentences plus 2-4 short bullets, under 120 words total."
     )
 
     raw_text = entry.get("content", "")
@@ -96,7 +100,7 @@ def _summarize_entry_with_groq(entry: Dict[str, Any]) -> Optional[str]:
         f"{event_context}\n\n"
         "Raw text prepared for the log:\n"
         f"{raw_text}\n\n"
-        "Write the learning-focused summary now (no repo/branch/delivery metadata):"
+        "Write the concise learning-focused summary now."
     )
 
     try:
@@ -115,9 +119,46 @@ def _summarize_entry_with_groq(entry: Dict[str, Any]) -> Optional[str]:
         return None
 
 
+def _build_content_blocks(
+    ai_summary: Optional[str],
+    entry_content: str,
+    roadmap_line: Optional[str],
+    roadmap_context: Optional[str],
+    dedup_marker: Optional[str],
+) -> Tuple[str, str]:
+    """
+    Returns a tuple of (display_block, content) where content is formatted so the
+    summary is shown first, and raw event/meta data is hidden behind a marker.
+    """
+    display_parts: List[str] = []
+    if ai_summary:
+        display_parts.append(ai_summary)
+    else:
+        display_parts.append(entry_content)
+
+    for extra in [roadmap_line, roadmap_context]:
+        if extra:
+            display_parts.append(extra)
+
+    display_block = "\n\n".join([part for part in display_parts if part and part.strip()])
+
+    meta_parts: List[str] = []
+    if ai_summary and dedup_marker:
+        meta_parts.append(dedup_marker)
+    if ai_summary and entry_content:
+        meta_parts.append(entry_content)
+
+    meta_block = ""
+    if meta_parts:
+        meta_block = f"---\nRaw event:\n" + "\n".join([part for part in meta_parts if part])
+
+    content = "\n\n".join([part for part in [display_block, meta_block] if part])
+    return display_block, content
+
+
 def create_learning_entries_from_events(
     entries: List[Dict[str, Any]],
-    delivery_id: Optional[str] = None
+    delivery_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Create LearningEntry records from parsed automation events.
@@ -149,22 +190,27 @@ def create_learning_entries_from_events(
                 or _guess_roadmap_item_id(messages)
             )
 
-            # Build title and content
-            title = "Learning update" if ai_summary else entry["title"]
-            content_parts: List[str] = []
-
-            if ai_summary:
-                content_parts.append(ai_summary)
-            else:
-                content_parts.append(entry["content"])
-
+            item = None
+            roadmap_line = None
+            roadmap_context = None
             if roadmap_item_id:
                 item = RoadmapItem.objects.select_related("section").filter(id=roadmap_item_id).first()
                 if item and item.section:
-                    title = f"{item.section.order}. {item.section.title}"
-                    content_parts.append(f"Related to: {item.section.title} > {item.title}")
+                    roadmap_line = f"Related to: {item.section.title} > {item.title}"
+                    if item.description:
+                        roadmap_context = item.description.strip()
 
-            content = "\n\n".join([part for part in content_parts if part.strip()])
+            title = "Learning update"
+            if item and item.section:
+                title = f"{item.section.order}. {item.section.title}"
+
+            _, content = _build_content_blocks(
+                ai_summary=ai_summary,
+                entry_content=entry["content"],
+                roadmap_line=roadmap_line,
+                roadmap_context=roadmap_context,
+                dedup_marker=dedup_marker,
+            )
 
             created_entry = LearningEntry.objects.create(
                 title=title,

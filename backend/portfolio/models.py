@@ -47,7 +47,7 @@ class LearningEntry(models.Model):
     is_public = models.BooleanField(default=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-created_at", "-id"]
 
     def __str__(self) -> str:
         if self.roadmap_item:

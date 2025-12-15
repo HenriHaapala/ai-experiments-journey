@@ -9,6 +9,7 @@ import os
 from typing import Any, Dict
 
 from django.http import JsonResponse
+from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework import status
@@ -19,8 +20,6 @@ from .parsers import parse_push_event, parse_pull_request_event
 from .tasks import create_learning_entries_from_events
 
 logger = logging.getLogger(__name__)
-
-GITHUB_WEBHOOK_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET", "")
 
 
 def _verify_signature(secret: str, payload: bytes, signature_header: str) -> bool:
@@ -44,7 +43,8 @@ class GitHubWebhookView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        if not GITHUB_WEBHOOK_SECRET:
+        secret = getattr(settings, "GITHUB_WEBHOOK_SECRET", os.getenv("GITHUB_WEBHOOK_SECRET", ""))
+        if not secret:
             return JsonResponse(
                 {"success": False, "error": "GITHUB_WEBHOOK_SECRET not configured"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -54,7 +54,7 @@ class GitHubWebhookView(APIView):
         event_type = request.headers.get("X-GitHub-Event", "")
         delivery_id = request.headers.get("X-GitHub-Delivery", "")
 
-        if not _verify_signature(GITHUB_WEBHOOK_SECRET, request.body, signature):
+        if not _verify_signature(secret, request.body, signature):
             logger.warning("Invalid GitHub webhook signature (delivery %s)", delivery_id)
             return JsonResponse(
                 {"success": False, "error": "Invalid signature"},
