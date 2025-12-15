@@ -36,6 +36,17 @@ def _roadmap_hint() -> str:
     return "\n".join(lines)
 
 
+def _section_bias_tokens() -> Dict[str, List[str]]:
+    """
+    Heuristic tokens that should strongly bias matching toward specific sections.
+    Extendable if new sections are added later.
+    """
+    return {
+        "agents": ["mcp", "agent", "agents", "tool", "tools", "automation"],
+        "rag": ["rag", "retrieval", "embedding", "embeddings", "vector", "chunk", "chunks", "chunking", "pgvector"],
+    }
+
+
 def _guess_roadmap_item_id(messages: List[str]) -> Optional[int]:
     """
     Naive roadmap item matching based on commit messages.
@@ -66,28 +77,68 @@ def _match_roadmap_item_by_text(summary: Optional[str], raw: str) -> Optional[in
 
     best_id: Optional[int] = None
     best_score = 0
+    bias_tokens = _section_bias_tokens()
+    debug_candidates = []
 
     for item in RoadmapItem.objects.select_related("section").all():
         title = (item.title or "").lower()
         desc = (item.description or "").lower()
         section_title = (item.section.title if item.section else "") or ""
 
-        tokens: List[str] = []
-        for chunk in [title, desc, section_title.lower()]:
-            if chunk:
-                tokens.append(chunk)
-                tokens.extend(
-                    [tok for tok in chunk.replace("/", " ").split() if len(tok) >= 3]
-                )
+        # Exact phrase matches get a heavy boost
+        score = 0
+        for phrase, weight in [
+            (title, 3),
+            (desc, 2),
+            (section_title.lower(), 4),
+        ]:
+            if phrase and phrase in text:
+                score += len(phrase) * weight
 
-        score = sum(len(token) for token in tokens if token and token in text)
+        # Token-level overlap with variable weights
+        tokens: List[tuple[str, int]] = []
+        for chunk, weight in [
+            (title, 2),
+            (desc, 1),
+            (section_title.lower(), 3),
+        ]:
+            if not chunk:
+                continue
+            for tok in chunk.replace("/", " ").split():
+                if len(tok) >= 3:
+                    tokens.append((tok, weight))
+
+        for tok, weight in tokens:
+            if tok in text:
+                score += len(tok) * weight
+
+        # Section bias: strong bonus if text contains bias tokens that map to the section
+        section_bias_score = 0
+        section_key = "agents" if "agent" in section_title.lower() or "mcp" in section_title.lower() else (
+            "rag" if "rag" in section_title.lower() or "vector" in section_title.lower() else None
+        )
+        if section_key and section_key in bias_tokens:
+            for tok in bias_tokens[section_key]:
+                if tok in text:
+                    section_bias_score += 25
+                    break  # one hit is enough for the bonus
+
+        score += section_bias_score
 
         if score > best_score:
             best_score = score
             best_id = item.id
+        debug_candidates.append((item.id, section_title, title, score))
 
     # Require a minimal match; otherwise return None
-    return best_id if best_score >= 4 else None
+    debug_candidates.sort(key=lambda t: t[3], reverse=True)
+    if debug_candidates:
+        logger.debug(
+            "Roadmap match candidates (top 3): %s",
+            debug_candidates[:3],
+        )
+
+    return best_id if best_score >= 8 else None
 
 
 def _summarize_entry_with_groq(entry: Dict[str, Any]) -> Optional[str]:
@@ -116,8 +167,8 @@ def _summarize_entry_with_groq(entry: Dict[str, Any]) -> Optional[str]:
         "Do NOT mention repository names, branches, delivery IDs, commit counts, or authors. "
         "Avoid phrases like 'GitHub push' or other transport metadata. "
         "Keep it concise: 1-2 sentences plus 2-4 short bullets, under 120 words total. "
-        "Use the provided roadmap outline to infer the most relevant section/item and mention it succinctly if confident "
-        "(e.g., 'Likely roadmap: <Section> > <Item>')."
+        "Use the provided roadmap outline to infer the most relevant section/item; if high confidence, add one line like "
+        "'Likely roadmap: <Section> > <Item>'."
     )
 
     raw_text = entry.get("content", "")
