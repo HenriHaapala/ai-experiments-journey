@@ -281,27 +281,31 @@ def _build_content_blocks(
     roadmap_line: Optional[str],
     roadmap_context: Optional[str],
     dedup_marker: Optional[str],
+    file_paths: Optional[List[str]] = None,
 ) -> Tuple[str, str]:
     """
     Returns a tuple of (display_block, content) where content is formatted so the
     summary is shown first, and raw event/meta data is hidden behind a marker.
     """
     display_parts: List[str] = []
-    if ai_summary:
-        display_parts.append(ai_summary)
-    else:
-        display_parts.append(entry_content)
+    summary_text = ai_summary or "Learning update captured automatically; raw event stored separately."
+    display_parts.append(summary_text)
 
     for extra in [roadmap_line, roadmap_context]:
         if extra:
             display_parts.append(extra)
 
+    if file_paths:
+        unique_files = sorted(set(file_paths))
+        display_parts.append("Files changed:")
+        display_parts.extend(unique_files)
+
     display_block = "\n\n".join([part for part in display_parts if part and part.strip()])
 
     meta_parts: List[str] = []
-    if ai_summary and dedup_marker:
+    if dedup_marker:
         meta_parts.append(dedup_marker)
-    if ai_summary and entry_content:
+    if entry_content:
         meta_parts.append(entry_content)
 
     meta_block = ""
@@ -407,6 +411,7 @@ def create_learning_entries_from_events(
                 roadmap_line=roadmap_line,
                 roadmap_context=roadmap_context,
                 dedup_marker=dedup_marker,
+                file_paths=file_paths,
             )
 
             created_entry = LearningEntry.objects.create(
