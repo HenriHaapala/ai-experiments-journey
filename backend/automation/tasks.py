@@ -14,6 +14,28 @@ from portfolio.models import LearningEntry, RoadmapItem
 logger = logging.getLogger(__name__)
 
 
+def _roadmap_hint() -> str:
+    """
+    Build a compact, human-readable roadmap outline for the LLM to reference.
+    """
+    sections: Dict[str, List[str]] = {}
+    for item in RoadmapItem.objects.select_related("section").all():
+        section_title = item.section.title if item.section else "Unsectioned"
+        sections.setdefault(section_title, []).append(item.title or "")
+
+    if not sections:
+        return ""
+
+    lines: List[str] = []
+    for section, titles in sections.items():
+        deduped = [t for t in dict.fromkeys([t for t in titles if t]).keys()]
+        if deduped:
+            lines.append(f"- {section}: {', '.join(deduped)}")
+        else:
+            lines.append(f"- {section}: (no items)")
+    return "\n".join(lines)
+
+
 def _guess_roadmap_item_id(messages: List[str]) -> Optional[int]:
     """
     Naive roadmap item matching based on commit messages.
@@ -86,23 +108,32 @@ def _summarize_entry_with_groq(entry: Dict[str, Any]) -> Optional[str]:
         logger.error("Unable to initialize Groq client for webhook summarization: %s", exc)
         return None
 
+    roadmap_outline = _roadmap_hint()
+
     system_prompt = (
         "You write learning-focused summaries of GitHub activity. "
         "Highlight what was built or learned and call out tools, libraries, frameworks, and languages involved. "
         "Do NOT mention repository names, branches, delivery IDs, commit counts, or authors. "
         "Avoid phrases like 'GitHub push' or other transport metadata. "
-        "Keep it concise: 1-2 sentences plus 2-4 short bullets, under 120 words total."
+        "Keep it concise: 1-2 sentences plus 2-4 short bullets, under 120 words total. "
+        "Use the provided roadmap outline to infer the most relevant section/item and mention it succinctly if confident "
+        "(e.g., 'Likely roadmap: <Section> > <Item>')."
     )
 
     raw_text = entry.get("content", "")
     event_context = json.dumps(payload, indent=2)
-    user_prompt = (
-        "Source GitHub event data (JSON):\n"
-        f"{event_context}\n\n"
-        "Raw text prepared for the log:\n"
-        f"{raw_text}\n\n"
-        "Write the concise learning-focused summary now."
-    )
+    user_prompt_parts = [
+        "Source GitHub event data (JSON):",
+        event_context,
+        "",
+        "Raw text prepared for the log:",
+        raw_text,
+    ]
+    if roadmap_outline:
+        user_prompt_parts.extend(["", "Roadmap outline:", roadmap_outline])
+    user_prompt_parts.append("")
+    user_prompt_parts.append("Write the concise learning-focused summary now.")
+    user_prompt = "\n".join(user_prompt_parts)
 
     try:
         response = client.chat.completions.create(
