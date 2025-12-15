@@ -98,13 +98,14 @@ def _match_roadmap_item_by_text(
         title = (item.title or "").lower()
         desc = (item.description or "").lower()
         section_title = (item.section.title if item.section else "") or ""
+        section_title_lower = section_title.lower()
 
         # Exact phrase matches get a heavy boost
         score = 0
         for phrase, weight in [
             (title, 3),
             (desc, 2),
-            (section_title.lower(), 4),
+            (section_title_lower, 4),
         ]:
             if phrase and phrase in text:
                 score += len(phrase) * weight
@@ -114,7 +115,7 @@ def _match_roadmap_item_by_text(
         for chunk, weight in [
             (title, 2),
             (desc, 1),
-            (section_title.lower(), 3),
+            (section_title_lower, 3),
         ]:
             if not chunk:
                 continue
@@ -131,7 +132,7 @@ def _match_roadmap_item_by_text(
         section_key = None
         for key, cfg in taxonomy.items():
             for kw in cfg.get("section_keywords", []):
-                if kw in section_title.lower():
+                if kw in section_title_lower:
                     section_key = key
                     break
             if section_key:
@@ -158,10 +159,15 @@ def _match_roadmap_item_by_text(
                     continue
                 if item_name and item_name == title:
                     llm_bonus = max(llm_bonus, int(conf * 50))
-                elif section_name and section_name == section_title.lower():
+                elif section_name and section_name == section_title_lower:
                     llm_bonus = max(llm_bonus, int(conf * 25))
 
-        score += section_bias_score + llm_bonus
+        # Penalize very broad sections (e.g., Foundations) when no section-specific tokens matched
+        broad_section_penalty = 0
+        if "foundation" in section_title_lower and section_bias_score == 0:
+            broad_section_penalty = 15
+
+        score += section_bias_score + llm_bonus - broad_section_penalty
 
         if score > best_score:
             best_score = score
