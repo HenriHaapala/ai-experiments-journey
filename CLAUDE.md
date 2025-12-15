@@ -364,7 +364,7 @@ npm install
 npm run dev
 ```
 
-## Current Status: Phase 3 - Intelligent Agents & Automation (~80% Complete)
+## Current Status: Phase 3 - Intelligent Agents & Automation (✅ CORE COMPLETE - 95%)
 
 ### Overview
 Transform the MCP server from an internal tool into an intelligent, autonomous system with external access, LangChain-powered agents, and automated workflows.
@@ -600,28 +600,48 @@ services:
 - ✅ Verified all tools working (see `PRECOMMIT_VERIFICATION.md`)
 - ✅ Created GitHub Actions CI/CD pipeline (`.github/workflows/ci.yml`)
 
-**❌ Step 5: GitHub Webhook Automation** (NOT STARTED)
-- [ ] Create webhook receiver endpoint
-- [ ] Implement commit/PR parsing logic
-- [ ] Integrate with agent for intelligent entry creation
-- [ ] Test with real GitHub webhooks
+**✅ Step 5: GitHub Webhook Automation** (COMPLETE - Dec 15, 2025)
+- ✅ Created webhook receiver endpoint (`backend/automation/github_webhook.py`)
+- ✅ Implemented commit/PR parsing logic (`parsers.py`)
+- ✅ Groq LLM integration for intelligent entry creation (`tasks.py` - 708 lines)
+- ✅ HMAC signature verification for security
+- ✅ Roadmap item mapping with file hints and section bias tokens
+- ✅ Technology detection from file changes
+- ✅ Deduplication via delivery ID
+- ✅ Deployed and tested in production (webhook ID: 586136918)
+- ✅ Successfully creating learning entries from commits/PRs
 
-**❌ Step 6: Additional Automations** (NOT STARTED)
-- [ ] Scheduled progress reports
-- [ ] Trending topics monitor
-- [ ] Document upload automation
-- [ ] Smart reminders
+**💡 Step 6: Additional Automations** (OPTIONAL ENHANCEMENTS)
+- ❌ Scheduled progress reports (nice-to-have)
+- 🔄 Trending topics monitor (IN QUEUE - planned implementation)
+- ❌ Document upload automation (nice-to-have)
+- ❌ Smart reminders (nice-to-have)
+
+**Note**: These are optional enhancements beyond core Phase 3 requirements.
+
+**📋 Step 7: Domain Configuration Research** (TODO)
+- 🔍 **Task**: Research why production uses `wwwportfolio.henrihaapala.com` instead of `henrihaapala.com`
+- **Investigation Areas**:
+  - Check DNS configuration (A records, CNAME records)
+  - Review domain registrar settings (GoDaddy, Namecheap, etc.)
+  - Verify SSL certificate coverage (root domain vs subdomain)
+  - Examine nginx server_name configuration
+  - Test if root domain redirects to www subdomain
+- **Expected Outcome**: Document rationale and potentially configure root domain to work alongside/redirect to www subdomain
+- **Related Files**: nginx config, DNS settings, SSL certificates
 
 **📋 See [REMAINING_PHASE3_TASKS.md](REMAINING_PHASE3_TASKS.md) for detailed implementation guide**
 
-### Success Criteria
+### Success Criteria (ALL COMPLETE ✅)
 
 - ✅ External clients can connect to MCP server via SSE
 - ✅ Agent can answer natural language queries using MCP tools
-- ❌ GitHub commits automatically create learning entries (NOT YET)
+- ✅ **GitHub commits automatically create learning entries** (DONE - deployed in production)
 - ✅ Agent maintains conversation context across queries
 - ✅ All services run in Docker with proper networking
 - ✅ Complete documentation with example use cases
+
+**Phase 3 Core Requirements: 100% COMPLETE** 🎉
 
 ### Technology Stack (Phase 3 Additions)
 
@@ -650,7 +670,13 @@ services:
 
 ## Recent Development
 
-### Phase 3 Progress: 80% Complete (Dec 6-8, 2025)
+### Phase 3 Progress: ✅ CORE COMPLETE (Dec 6-15, 2025)
+
+**December 15, 2025:**
+- ✅ **GitHub Webhook Automation Complete** - Full Groq LLM integration with roadmap mapping
+- ✅ **Production Webhook Deployed** - Webhook ID 586136918 receiving commits/PRs
+- ✅ **Intelligent Learning Entry Creation** - Automatic summaries with technology detection
+- ✅ **File-based Roadmap Matching** - Advanced heuristics with section bias tokens
 
 **December 11, 2025:**
 - ✅ **Production Fully Operational** - All services healthy and chat functionality working
@@ -687,7 +713,7 @@ services:
 - ✅ **Redis Memory** - Conversation history tracking
 - ✅ **Docker Service** - Running on port 8001 (healthy)
 
-**📋 Remaining Tasks:** See [REMAINING_PHASE3_TASKS.md](REMAINING_PHASE3_TASKS.md) for GitHub webhooks and additional automations
+**📋 Optional Enhancements:** See [REMAINING_PHASE3_TASKS.md](REMAINING_PHASE3_TASKS.md) for additional automation ideas (trending topics, scheduled reports, etc.)
 
 ### Phase 2 Complete: MCP Server (Dec 6, 2025)
 - **MCP Server Built** - Model Context Protocol server exposing 5 portfolio management tools
@@ -723,10 +749,12 @@ ai-portfolio/
 │   │   ├── urls.py          # Django URL routing (Phase 3)
 │   │   ├── middleware.py    # Authentication (Phase 3)
 │   │   └── README.md        # MCP server documentation
-│   ├── automation/          # Automation workflows (Phase 3 - NOT YET CREATED)
-│   │   ├── github_webhook.py # GitHub integration (TODO)
-│   │   ├── parsers.py       # Commit/PR parsing (TODO)
-│   │   └── tasks.py         # Background tasks (TODO)
+│   ├── automation/          # Automation workflows (GitHub webhooks)
+│   │   ├── README.md        # Automation overview
+│   │   ├── urls.py          # Django URL routing for automation
+│   │   ├── github_webhook.py # GitHub integration endpoint
+│   │   ├── parsers.py       # Commit/PR parsing helpers
+│   │   └── tasks.py         # Learning entry creation + LLM summarization
 │   ├── portfolio/
 │   │   ├── models.py        # Django models (roadmap, embeddings, RAG)
 │   │   └── ...
@@ -798,49 +826,38 @@ ai-portfolio/
 
 ## Testing & CI/CD Strategy
 
-### Current Status (December 11, 2025)
+### Current Status (December 15, 2025)
 
-**✅ Infrastructure Ready:**
-- Lefthook 1.10.3 installed for Git hooks
-- Pre-commit hooks: Gitleaks (secrets), Biome (frontend), Ruff (backend)
-- Test scripts defined in `package.json`
-- CI/CD pipeline configured in `.github/workflows/ci.yml`
+**✅ Test Suites Implemented:**
+- Backend pytest suite in `backend/tests/` (models, API, automation tasks)
+- Frontend Jest suite in `frontend/__tests__/components/` (Navigation, Card)
+- Agent service pytest suite in `agent_service/tests/` (FastAPI + MCP tools)
+- Lefthook pre-push hook runs pytest; CI/CD workflow ready for all suites
 
-**❌ Tests Not Yet Written:**
-- `backend/tests/` directory doesn't exist
-- `frontend/__tests__/` directory doesn't exist
-- `agent_service/tests/` directory doesn't exist
-- `e2e/tests/` directory doesn't exist
-- Pre-push hook expects `pytest` but no real tests exist yet
+**❌ Remaining Gaps:**
+- No Playwright E2E tests yet (`e2e/tests/` missing)
+- Frontend page/hook/API client tests still needed
+- Ensure frontend and agent_service tests run in GitHub Actions alongside backend
 
-**📋 Priority:** Implement tests after Phase 3 completion (agent routing fixed)
+**📋 Priority:** Build E2E coverage and extend frontend/page-level tests.
 
-**📝 Implementation Plan** (from TESTING_TODO.md):
+**📝 Implementation Plan** (see TESTING_TODO.md for details):
 
-**Step 1: Backend Tests** (Highest priority - 2 hours)
-- Install: `cd backend && pip install pytest pytest-django pytest-cov`
-- Create `backend/tests/test_models.py` - Test database models
-- Create `backend/tests/test_api.py` - Test all API endpoints
-- Create `backend/tests/conftest.py` - Test fixtures
-- Write 5-10 basic tests for models and API
-- Run: `cd backend && pytest -v`
+**Step 1: End-to-End Tests** (Playwright)
+- Add `e2e/tests/` covering homepage health, chat flow, roadmap, and learning log journeys
+- Wire scripts: `npm run test:e2e`, `npm run test:e2e:ui`
 
-**Step 2: Frontend Tests** (Medium priority - 1 hour)
-- Install: `cd frontend && npm install --save-dev jest @testing-library/react @testing-library/jest-dom`
-- Create `frontend/__tests__/Navigation.test.tsx`
-- Create `frontend/jest.config.js`
-- Write 3-5 tests for critical components
+**Step 2: Frontend Coverage Expansion** (Medium priority)
+- Add tests for pages (Homepage, Roadmap, Learning), hooks, and API client utilities
 - Run: `cd frontend && npm test`
 
-**Step 3: Agent Tests** (Lower priority - 1 hour)
-- Install: `cd agent_service && pip install pytest pytest-asyncio pytest-cov`
-- Create `agent_service/tests/test_api.py` - FastAPI endpoints
-- Create `agent_service/tests/test_mcp_tools.py` - Tool integration
-- Run: `cd agent_service && pytest -v`
+**Step 3: CI Integration** (Lower priority)
+- Add frontend and agent_service test jobs to `.github/workflows/ci.yml`
+- Keep backend pytest in pre-push hook
 
-**Total Estimated Time:** 3-4 hours
+**Total Estimated Time:** 3-5 hours for remaining gaps
 
-**Note:** Pre-push hook in `lefthook.yml` already configured to run `pytest --maxfail=1 --disable-warnings -q` before push. Will work once tests are created!
+**Note:** Backend/agent/frontend unit tests already exist; next focus is E2E and broader frontend coverage.
 
 ### Overview
 Production-grade testing infrastructure with automated quality gates and continuous integration. Demonstrates industry best practices for modern web applications.

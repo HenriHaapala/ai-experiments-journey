@@ -9,23 +9,24 @@ export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navLinks = [
-    { href: "/", label: "Home" },
-    { href: "/roadmap", label: "Roadmap" },
-    { href: "/learning", label: "MCP Learning Log" }
+    { href: "/", label: "CASE FILES" },
+    { href: "/roadmap", label: "STUDIES" },
+    { href: "/learning", label: "MCP LEARNING LOG" }
   ];
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const closeMenu = () => setIsMenuOpen(false);
 
   return (
-    <nav className="sticky top-0 z-[100] border-b border-primary-red/30 bg-bg-nav p-4 backdrop-blur-[10px] md:p-6">
-      <div className="flex items-center justify-between">
+    <nav className="sticky top-0 z-[100] border-b border-primary-red/20 bg-black/90 px-4 py-4 backdrop-blur-md md:px-8 md:py-5">
+      <div className="mx-auto flex max-w-[1400px] items-center justify-between">
         <Link
           href="/"
-          className="text-lg font-bold tracking-[0.05em] text-primary-red no-underline md:text-xl"
+          className="flex items-center gap-3 font-mono text-sm uppercase tracking-wider text-text-light no-underline md:text-base"
           onClick={closeMenu}
         >
-          HENRI HAAPALA
+          <span className="text-primary-red">Ⅱ</span>
+          <span>HENRI HAAPALA</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -34,10 +35,10 @@ export default function Navigation() {
             <Link
               key={href}
               href={href}
-              className={`no-underline transition-colors duration-300 ${
+              className={`font-mono text-xs uppercase tracking-wider no-underline transition-colors duration-200 ${
                 pathname === href
                   ? "text-primary-red"
-                  : "text-text-light hover:text-primary-red"
+                  : "text-text-gray hover:text-text-light"
               }`}
             >
               {label}

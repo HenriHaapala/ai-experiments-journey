@@ -5,7 +5,6 @@ import { useEffect, useState, FormEvent } from "react";
 import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";
 import PageWrapper from "./components/layout/PageWrapper";
-import Card from "./components/ui/Card";
 
 type ContextChunk = {
   id: number;
@@ -32,7 +31,6 @@ export default function HomePage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedContexts, setExpandedContexts] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -89,13 +87,6 @@ export default function HomePage() {
     }
   };
 
-  const toggleContext = (index: number) => {
-    setExpandedContexts((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
-  };
-
   const handleFollowUpClick = (followUpQuestion: string) => {
     setQuestion(followUpQuestion);
   };
@@ -105,205 +96,234 @@ export default function HomePage() {
       <Navigation />
 
       {/* Hero Section with Chatbot */}
-      <section className="bg-section mx-auto max-w-[1400px] px-4 py-8 md:px-8 md:py-16">
-        <div className="grid-responsive-900 items-stretch">
+      <section className="mx-auto max-w-[1400px] px-4 py-12 md:px-8 md:py-24">
+        <div className="grid-responsive-900 items-stretch gap-8 md:gap-16">
           {/* Left: Name and Title */}
-          <div>
-            <h1 className="text-gradient-red mb-4 text-[2.5rem] font-black leading-[1.1] tracking-tight md:text-[4rem]">
-              Henri Haapala
+          <div className="flex flex-col justify-center">
+            {/* System Status Badge */}
+            <p className="mb-8 font-mono text-xs uppercase tracking-wider text-text-gray">
+              » SYSTEM STATUS: <span className={backendStatus === "ok" ? "text-primary-red" : "text-text-gray"}>OPERATIONAL</span>
+            </p>
+
+            {/* Large Serif Heading */}
+            <h1 className="mb-6 font-serif text-[3.5rem] font-light leading-[1.05] tracking-tight md:text-[5rem] lg:text-[6rem]">
+              <span className="text-[#B8B8B8]">The</span>
+              <br />
+              <span className="font-normal text-text-light">Architect</span>
             </h1>
-            <p className="mb-6 text-xl font-light text-text-gray md:mb-8 md:text-2xl">
-              AI Engineer & Full-Stack Developer
+
+            <p className="mb-8 max-w-md text-base leading-relaxed text-text-gray md:text-lg">
+              Building intelligent systems in the shadows. Specializing in RAG, vector databases, and the unseen logic of AI applications.
             </p>
-            <div className="divider-red mb-6 md:mb-8" />
-            <p className="mb-4 text-base leading-relaxed text-text-light md:mb-6 md:text-[1.05rem]">
-              Building intelligent systems with RAG, embeddings, and LLMs.
-              Passionate about semantic search, vector databases, and production AI applications.
-            </p>
-            <p className="text-sm text-text-gray md:text-[0.95rem]">
-              Backend health: <span className={backendStatus === "ok" ? "text-primary-red" : "text-text-gray"}>{backendStatus}</span>
-            </p>
+
+            {/* Metadata */}
+            <div className="flex flex-col gap-2 font-mono text-xs text-text-gray">
+              <div className="flex items-center gap-2">
+                <span className="text-primary-red">●</span>
+                <span>Backend Health:</span>
+                <span className="uppercase">{backendStatus === "ok" ? "Nominal" : "Checking"}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-primary-red">●</span>
+                <span>Last Login:</span>
+                <span className="uppercase">Today, 05:45 AM</span>
+              </div>
+            </div>
           </div>
 
-          {/* Right: Chat Interface */}
-          <Card className="flex h-full min-h-[500px] flex-col">
-            <h2 className="mb-3 text-xl font-bold text-primary-red md:mb-4 md:text-2xl">
-              Ask My AI Assistant
-            </h2>
+          {/* Right: CLASSIFIED Card */}
+          <div className="classified-panel">
+            <div className="classified-inner">
+              {/* CLASSIFIED Header */}
+              <div className="classified-header flex items-start justify-between">
+                <div>
+                  <p className="font-mono text-lg font-bold uppercase tracking-[0.16em] text-primary-red">
+                    Classified
+                  </p>
+                  <p className="mt-1 font-mono text-[12px] uppercase tracking-[0.22em] text-[#c35b5b]">
+                    AI Assistant Interface
+                  </p>
+                  <p className="mt-3 font-serif text-sm italic text-text-gray">
+                    "Ask me anything about the subject's work, known associates, or technical capabilities..."
+                  </p>
+                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#2d0f0f] bg-[#0c0808] shadow-[0_0_0_1px_rgba(255,0,0,0.08),0_10px_30px_rgba(0,0,0,0.6)]">
+                  <span className="h-2 w-2 rounded-full bg-primary-red shadow-[0_0_0_4px_rgba(204,0,0,0.2)]" />
+                </div>
+              </div>
 
-            {/* Chat Messages */}
-            <div className="mb-3 min-h-[200px] flex-1 overflow-y-auto md:mb-4 md:min-h-[250px]">
-              {messages.length === 0 && (
-                <p className="text-sm italic text-text-gray md:text-[0.95rem]">
-                  Ask me anything about Henri's work, skills, or AI learning journey...
-                </p>
-              )}
-              {messages.map((msg, idx) => {
-                const isAssistant = msg.role === "assistant";
-                const isLowConfidence = isAssistant && (
-                  msg.status === "low_confidence" ||
-                  msg.status === "very_low_confidence" ||
-                  (typeof msg.confidence === "number" && msg.confidence < 0.25)
-                );
+              {/* Chat Messages */}
+              <div className="mt-6 rounded-sm border border-[#1c0e0e] bg-[#070707]/80 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                {messages.length === 0 ? (
+                  <div className="h-10" />
+                ) : (
+                  <div className="max-h-[260px] space-y-4 overflow-y-auto pr-1">
+                    {messages.map((msg, idx) => {
+                      const isAssistant = msg.role === "assistant";
+                      const isLowConfidence = isAssistant && (
+                        msg.status === "low_confidence" ||
+                        msg.status === "very_low_confidence" ||
+                        (typeof msg.confidence === "number" && msg.confidence < 0.25)
+                      );
 
-                return (
-                  <div key={idx} className="mb-4">
-                    {isAssistant && isLowConfidence && (
-                      <div className="mb-2 rounded border border-[#f2c14f] bg-[#f2c14f]/10 p-2 text-xs text-[#f2c14f]">
-                        ⚠️ Low confidence answer
-                      </div>
-                    )}
-                    <div className={`rounded-md px-4 py-3 ${
-                      msg.role === "user"
-                        ? "border border-primary-red/30 bg-primary-red/20"
-                        : "border border-white/10 bg-white/5"
-                    }`}>
-                      <strong className={msg.role === "user" ? "text-primary-red" : "text-text-light"}>
-                        {msg.role === "user" ? "You: " : "AI: "}
-                      </strong>
-                      <span className="text-text-light">{msg.content}</span>
-                    </div>
+                      return (
+                        <div key={idx} className="rounded-sm bg-black/40 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+                          {isAssistant && isLowConfidence && (
+                            <div className="mb-2 border border-[#f2c14f]/40 bg-[#f2c14f]/10 px-3 py-2 font-mono text-[11px] uppercase text-[#f2c14f]">
+                              Low confidence response
+                            </div>
+                          )}
+                          <div className={`rounded-sm border-l-2 px-3 py-2 ${msg.role === "user" ? "border-primary-red/70 bg-primary-red/5" : "border-[#2b2b2b] bg-black/30"}`}>
+                            <div className="mb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-text-gray">
+                              {msg.role === "user" ? "Query" : "Response"}
+                            </div>
+                            <p className="text-sm leading-relaxed text-text-light">{msg.content}</p>
+                          </div>
 
-                    {isAssistant && msg.followUpQuestions && msg.followUpQuestions.length > 0 && (
-                      <div className="mt-2">
-                        <div className="mb-2 text-xs text-text-gray">
-                          💡 You might want to ask:
+                          {isAssistant && msg.followUpQuestions && msg.followUpQuestions.length > 0 && (
+                            <div className="mt-3 border-l-2 border-primary-red/40 pl-3">
+                              <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-text-gray">
+                                Suggested queries
+                              </div>
+                              <div className="flex flex-col gap-1.5">
+                                {msg.followUpQuestions.map((q, qIdx) => (
+                                  <button
+                                    key={qIdx}
+                                    onClick={() => handleFollowUpClick(q)}
+                                    className="cursor-pointer rounded-sm border border-primary-red/30 bg-primary-red/10 px-3 py-1.5 text-left text-xs text-text-light transition hover:border-primary-red/60 hover:bg-primary-red/15"
+                                  >
+                                    {q}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          {msg.followUpQuestions.map((q, qIdx) => (
-                            <button
-                              key={qIdx}
-                              onClick={() => handleFollowUpClick(q)}
-                              className="cursor-pointer rounded-xl border border-primary-red bg-primary-red/10 px-3 py-2 text-xs text-primary-red hover:bg-primary-red/20"
-                            >
-                              {q}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
+                )}
+              </div>
 
-            {/* Chat Input */}
-            <form onSubmit={handleSubmit}>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Ask about Henri's experience..."
-                  className="flex-1 rounded border border-primary-red/30 bg-black/50 px-3 py-2 text-sm text-text-light focus:outline-none focus:ring-2 focus:ring-primary-red md:py-3 md:text-[0.95rem]"
-                />
+              {/* Chat Input */}
+              <form onSubmit={handleSubmit} className="mt-6 border-t border-[#241010] pt-4">
+                <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.16em] text-text-gray">
+                  Interrogate the database
+                </div>
+                <div className="flex items-center gap-3 rounded-sm border border-[#1a1a1a] bg-[#0b0b0b] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-1px_0_rgba(0,0,0,0.6)] focus-within:border-[#b12b2b] focus-within:shadow-[0_0_0_1px_rgba(177,43,43,0.4),inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-1px_0_rgba(0,0,0,0.6)]">
+                  <svg
+                    aria-hidden="true"
+                    className="h-4 w-4 text-text-gray"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="m21 21-4.35-4.35m0 0A6.75 6.75 0 1 0 6.75 6.75a6.75 6.75 0 0 0 9.9 9.9Z"
+                    />
+                  </svg>
+                  <input
+                    type="text"
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
+                    placeholder="Ask about dossiers, systems, or capabilities..."
+                    className="flex-1 bg-transparent font-mono text-sm text-text-light placeholder:text-text-gray/60 focus:outline-none"
+                  />
+                </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="cursor-pointer rounded border border-primary-red bg-gradient-to-br from-primary-red to-dark-red px-4 py-2 font-semibold text-text-light transition-opacity disabled:cursor-not-allowed disabled:opacity-60 md:px-6 md:py-3"
+                  className="classified-button mt-4 w-full cursor-pointer px-6 py-4 font-mono text-sm font-bold uppercase tracking-[0.15em] text-white"
                 >
-                  {loading ? "..." : "Ask"}
+                  {loading ? "Processing..." : "Initiate Query >>"}
                 </button>
+                {error && (
+                  <p className="mt-3 border border-[#f2c14f]/40 bg-[#f2c14f]/10 px-3 py-2 font-mono text-xs text-[#f2c14f]">
+                    {error}
+                  </p>
+                )}
+              </form>
+
+              {/* Footer Metadata */}
+              <div className="classified-meta mt-6 flex items-center justify-between border-t border-[#241010] pt-4 font-mono text-[11px] uppercase text-text-gray">
+                <span>Secure Connection</span>
+                <span>Clearance: L3</span>
               </div>
-              {error && <p className="mt-2 text-sm text-[#f2c14f]">{error}</p>}
-            </form>
-          </Card>
-        </div>
-      </section>
-
-      {/* Bio Section */}
-      <section className="bg-section mx-auto max-w-[1400px] px-4 py-8 md:px-8 md:py-16">
-        <div className="grid-responsive-900 items-start">
-          {/* Left Column */}
-          <div>
-            <Card className="mb-6 md:mb-8">
-              <h2 className="mb-4 text-xl font-bold text-primary-red md:mb-6 md:text-2xl">
-                About Me
-              </h2>
-              <p className="mb-3 text-sm leading-relaxed text-text-light md:mb-4 md:text-base">
-                I'm an AI engineer passionate about building intelligent systems that solve real-world problems.
-                My focus is on RAG systems, embeddings, vector databases, and LLM applications.
-              </p>
-              <p className="text-sm leading-relaxed text-text-light md:text-base">
-                Currently building production-grade AI applications with Django, Next.js, and modern AI tools.
-                I specialize in retrieval-augmented generation, semantic search, and full-stack development.
-              </p>
-            </Card>
-
-            <Card>
-              <h3 className="mb-4 text-lg font-bold text-primary-red md:mb-6 md:text-xl">
-                Core Skills
-              </h3>
-              <div className="flex flex-wrap gap-2 md:gap-3">
-                {["Python", "Django", "Next.js", "React", "TypeScript", "PostgreSQL", "pgvector",
-                  "RAG Systems", "LLM Integration", "Cohere", "Groq", "Vector Search", "Full-Stack Development"]
-                  .map((skill) => (
-                    <span key={skill} className="rounded border border-primary-red/40 bg-primary-red/20 px-3 py-1.5 text-xs text-text-light md:px-4 md:py-2 md:text-sm">
-                      {skill}
-                    </span>
-                  ))}
-              </div>
-            </Card>
-          </div>
-
-          {/* Right Column */}
-          <div>
-            <Card className="mb-6 md:mb-8">
-              <h3 className="mb-4 text-lg font-bold text-primary-red md:mb-6 md:text-xl">
-                Education
-              </h3>
-              <div>
-                <h4 className="mb-2 text-base text-text-light md:text-lg">
-                  Bachelor of Business Administration (BBA)
-                </h4>
-                <p className="mb-1 text-sm text-text-gray md:text-[0.95rem]">
-                  Oulu University of Applied Sciences
-                </p>
-                <p className="text-xs text-text-gray md:text-sm">
-                  Specialization: Web Application Development
-                </p>
-              </div>
-            </Card>
-
-            <Card>
-              <h3 className="mb-4 text-lg font-bold text-primary-red md:mb-6 md:text-xl">
-                Current Focus
-              </h3>
-              <ul className="m-0 list-none p-0">
-                {[
-                  "Building production RAG systems with confidence scoring",
-                  "Semantic search with pgvector and Cohere embeddings",
-                  "LLM integration for intelligent applications",
-                  "Full-stack development with Django + Next.js",
-                  "Following AI Career Roadmap 2025 (10 sections)"
-                ].map((item, idx) => (
-                  <li key={idx} className={`py-2 text-sm leading-normal text-text-light md:py-3 md:text-[0.95rem] ${idx < 4 ? "border-b border-primary-red/20" : ""}`}>
-                    <span className="mr-2 text-primary-red">▸</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </Card>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="bg-section px-4 py-8 text-center md:px-8 md:py-16">
-        <div className="mx-auto max-w-[600px]">
-          <h2 className="mb-3 text-xl font-bold text-primary-red md:mb-4 md:text-[2rem]">
-            Explore My Work
+      {/* Case Files Section */}
+      <section className="mx-auto max-w-[1400px] px-4 py-12 md:px-8 md:py-16">
+        <div className="mb-8 flex items-end justify-between border-b border-text-gray/20 pb-4">
+          <h2 className="font-serif text-3xl font-light text-text-light md:text-4xl">
+            Case Files
           </h2>
-          <p className="mb-6 text-sm leading-relaxed text-text-gray md:mb-8 md:text-base">
-            Check out my AI learning roadmap or explore my learning log to see my projects and journey.
-          </p>
-          <div className="flex flex-col justify-center gap-3 md:flex-row md:gap-4">
-            <Link href="/roadmap" className="inline-block rounded border border-primary-red bg-gradient-to-br from-primary-red to-dark-red px-6 py-2.5 font-semibold text-text-light no-underline md:px-8 md:py-3">
-              View Roadmap
-            </Link>
-            <Link href="/learning" className="inline-block rounded border border-primary-red bg-transparent px-6 py-2.5 font-semibold text-primary-red no-underline hover:bg-primary-red/10 md:px-8 md:py-3">
+          <span className="font-mono text-xs uppercase tracking-wider text-text-gray">
+            CONFIDENTIAL
+          </span>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {/* Roadmap Card */}
+          <Link href="/roadmap" className="group block border border-text-gray/30 bg-black/40 p-6 no-underline transition-all hover:border-primary-red/50 hover:bg-black/60">
+            <div className="mb-4 flex items-start justify-between">
+              <span className="font-mono text-xs uppercase tracking-wider text-primary-red">001</span>
+              <span className="font-mono text-xs text-text-gray">2025-2026</span>
+            </div>
+            <h3 className="mb-3 font-serif text-xl font-normal text-text-light">
+              AI Career Roadmap
+            </h3>
+            <p className="mb-4 text-sm leading-relaxed text-text-gray">
+              Structured learning path covering 10 sections from foundations to production deployment.
+            </p>
+            <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-primary-red">
+              <span>View Case</span>
+              <span className="transition-transform group-hover:translate-x-1">»</span>
+            </div>
+          </Link>
+
+          {/* Learning Log Card */}
+          <Link href="/learning" className="group block border border-text-gray/30 bg-black/40 p-6 no-underline transition-all hover:border-primary-red/50 hover:bg-black/60">
+            <div className="mb-4 flex items-start justify-between">
+              <span className="font-mono text-xs uppercase tracking-wider text-primary-red">002</span>
+              <span className="font-mono text-xs text-text-gray">ACTIVE</span>
+            </div>
+            <h3 className="mb-3 font-serif text-xl font-normal text-text-light">
               Learning Log
-            </Link>
+            </h3>
+            <p className="mb-4 text-sm leading-relaxed text-text-gray">
+              Detailed documentation of projects, experiments, and technical discoveries.
+            </p>
+            <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-primary-red">
+              <span>View Case</span>
+              <span className="transition-transform group-hover:translate-x-1">»</span>
+            </div>
+          </Link>
+
+          {/* Technical Dossier Card */}
+          <div className="border border-text-gray/30 bg-black/40 p-6">
+            <div className="mb-4 flex items-start justify-between">
+              <span className="font-mono text-xs uppercase tracking-wider text-primary-red">003</span>
+              <span className="font-mono text-xs text-text-gray">CLASSIFIED</span>
+            </div>
+            <h3 className="mb-3 font-serif text-xl font-normal text-text-light">
+              Technical Dossier
+            </h3>
+            <p className="mb-4 text-sm leading-relaxed text-text-gray">
+              Core competencies: RAG systems, vector databases, LLM integration, full-stack development.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {["Python", "Django", "Next.js", "PostgreSQL", "Cohere", "Groq"].map((tech) => (
+                <span key={tech} className="border border-primary-red/30 bg-primary-red/10 px-2 py-1 font-mono text-xs text-text-light">
+                  {tech}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </section>

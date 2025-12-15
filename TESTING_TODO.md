@@ -1,122 +1,41 @@
-# Testing Implementation TODO
+# Testing Implementation TODO (Updated Dec 15, 2025)
 
-## Current Status (December 10, 2025)
+## Current Status
+- ✅ Backend pytest suite in `backend/tests/` (models, API, automation tasks)
+- ✅ Frontend Jest suite in `frontend/__tests__/components/` (Navigation, Card)
+- ✅ Agent service pytest suite in `agent_service/tests/` (FastAPI + MCP tools)
+- ✅ Lefthook pre-push runs backend pytest; CI workflow exists
+- ❌ Playwright E2E suite not created (`e2e/tests/` missing)
+- ❌ Frontend page/hook/API client tests missing
+- ❌ Frontend + agent_service test jobs not yet wired into GitHub Actions
 
-✅ **Pre-commit infrastructure ready**:
-- Lefthook 1.10.3 installed
-- Gitleaks, Biome, Ruff configured
-- Pre-commit hooks: secrets detection, linting, formatting
+## What to Add Next
 
-❌ **Missing: Actual tests**:
-- `backend/portfolio/tests.py` is empty
-- `backend/test_mcp_tools.py` is a manual test script (not pytest)
-- No frontend tests
-- Pre-push hook expects `pytest` but no real tests exist
+### 1) End-to-End Tests (Playwright)
+- Create `e2e/tests/` with coverage for homepage health, chat flow, roadmap, learning log.
+- Add npm scripts: `test:e2e`, `test:e2e:ui`.
+- Consider MSW or seeded data for stable runs.
 
----
+### 2) Frontend Coverage Expansion
+- Add page-level tests (Homepage, Roadmap, Learning).
+- Add hook/API client utility tests with mocked fetch.
+- Keep existing component tests as fast guardrail.
 
-## What We Need (Simple Version)
+### 3) CI Integration
+- Update `.github/workflows/ci.yml` to run frontend and agent_service tests alongside backend.
+- Keep backend pytest in pre-push hook; optionally add `npm test` smoke locally.
 
-### 1. Backend Tests (pytest)
-**Install dependencies:**
+## Quick Commands
 ```bash
-cd backend
-pip install pytest pytest-django pytest-cov
-```
-
-**Create tests:**
-- `backend/tests/test_models.py` - Test database models
-- `backend/tests/test_api.py` - Test API endpoints
-- `backend/tests/conftest.py` - Test fixtures
-
-**Run tests:**
-```bash
-cd backend
-pytest -v
-```
-
-### 2. Frontend Tests (Jest)
-**Install dependencies:**
-```bash
+# E2E scaffold
 cd frontend
-npm install --save-dev jest @testing-library/react @testing-library/jest-dom
-```
+npm install @playwright/test
+npx playwright install
+npm run test:e2e
 
-**Create tests:**
-- `frontend/__tests__/Navigation.test.tsx` - Test navigation component
-- `frontend/jest.config.js` - Jest configuration
-
-**Run tests:**
-```bash
-cd frontend
+# Frontend unit/integration
 npm test
+
+# Agent service (optional local run)
+cd agent_service && pytest -v
 ```
-
-### 3. Update Lefthook Pre-Push
-**File:** `lefthook.yml`
-
-Currently has:
-```yaml
-pre-push:
-  commands:
-    test-backend:
-      run: cd backend && pytest --maxfail=1 --disable-warnings -q
-```
-
-This will work once we add real pytest tests!
-
----
-
-## Priority After Agent Routing Fix
-
-**Step 1: Backend Tests** (Highest priority)
-- Write 5-10 basic tests for models and API
-- Ensures database operations work
-- Catches breaking changes before deployment
-
-**Step 2: Frontend Tests** (Medium priority)
-- Test critical components (Navigation, RoadmapCard)
-- Ensures UI doesn't break
-
-**Step 3: Agent Tests** (Lower priority)
-- Test agent service endpoints
-- Test MCP tool integration
-
----
-
-## Quick Start Commands
-
-### Install test dependencies:
-```bash
-# Backend
-cd backend && pip install pytest pytest-django pytest-cov
-
-# Frontend
-cd frontend && npm install --save-dev jest @testing-library/react @testing-library/jest-dom
-```
-
-### Run existing pre-commit hooks:
-```bash
-git commit -m "test"  # Runs secrets detection + linting automatically
-```
-
-### Run pre-push hooks (will fail until tests exist):
-```bash
-git push  # Will try to run pytest (not yet available)
-```
-
----
-
-## Expected Timeline
-
-**After fixing agent routing:**
-1. **Day 1**: Install pytest, write 5 backend tests
-2. **Day 2**: Install Jest, write 3 frontend tests
-3. **Day 3**: Test pre-push hooks, verify CI/CD integration
-
-**Total:** 3-4 hours of work
-
----
-
-**Created:** December 10, 2025
-**Next Action:** Fix agent routing first, then implement tests
