@@ -42,8 +42,16 @@ def _section_bias_tokens() -> Dict[str, List[str]]:
     Extendable if new sections are added later.
     """
     return {
-        "agents": ["mcp", "agent", "agents", "tool", "tools", "automation"],
-        "rag": ["rag", "retrieval", "embedding", "embeddings", "vector", "chunk", "chunks", "chunking", "pgvector"],
+        "agents": {
+            "section_keywords": ["agent", "mcp", "automation", "tool"],
+            "tokens": ["mcp", "agent", "agents", "tool", "tools", "automation", "webhook", "orchestration"],
+            "paths": ["automation/", "mcp_server/", "agent_service/", "scripts/agents"],
+        },
+        "rag": {
+            "section_keywords": ["rag", "vector", "embedding", "search"],
+            "tokens": ["rag", "retrieval", "embedding", "embeddings", "vector", "chunk", "chunks", "chunking", "pgvector", "similarity", "index"],
+            "paths": ["vector", "embedding", "rag", "search", "knowledge"],
+        },
     }
 
 
@@ -63,7 +71,12 @@ def _guess_roadmap_item_id(messages: List[str]) -> Optional[int]:
     return None
 
 
-def _match_roadmap_item_by_text(summary: Optional[str], raw: str) -> Optional[int]:
+def _match_roadmap_item_by_text(
+    summary: Optional[str],
+    raw: str,
+    files: Optional[List[str]] = None,
+    llm_candidates: Optional[List[Dict[str, Any]]] = None,
+) -> Optional[int]:
     """
     Try to map the entry to a roadmap item using the Groq summary (preferred) and raw text.
     Simple keyword overlap against roadmap item titles/descriptions.
@@ -77,8 +90,9 @@ def _match_roadmap_item_by_text(summary: Optional[str], raw: str) -> Optional[in
 
     best_id: Optional[int] = None
     best_score = 0
-    bias_tokens = _section_bias_tokens()
+    taxonomy = _section_bias_tokens()
     debug_candidates = []
+    file_paths = files or []
 
     for item in RoadmapItem.objects.select_related("section").all():
         title = (item.title or "").lower()
@@ -112,18 +126,42 @@ def _match_roadmap_item_by_text(summary: Optional[str], raw: str) -> Optional[in
             if tok in text:
                 score += len(tok) * weight
 
-        # Section bias: strong bonus if text contains bias tokens that map to the section
+        # Section bias: strong bonus if text or file paths contain bias tokens that map to the section
         section_bias_score = 0
-        section_key = "agents" if "agent" in section_title.lower() or "mcp" in section_title.lower() else (
-            "rag" if "rag" in section_title.lower() or "vector" in section_title.lower() else None
-        )
-        if section_key and section_key in bias_tokens:
-            for tok in bias_tokens[section_key]:
+        section_key = None
+        for key, cfg in taxonomy.items():
+            for kw in cfg.get("section_keywords", []):
+                if kw in section_title.lower():
+                    section_key = key
+                    break
+            if section_key:
+                break
+
+        if section_key and section_key in taxonomy:
+            for tok in taxonomy[section_key].get("tokens", []):
                 if tok in text:
                     section_bias_score += 25
-                    break  # one hit is enough for the bonus
+                    break  # one token hit is enough
+            for path in taxonomy[section_key].get("paths", []):
+                if any(path in fp.lower() for fp in file_paths):
+                    section_bias_score += 25
+                    break
 
-        score += section_bias_score
+        # Bonus if LLM suggested this item/section with confidence
+        llm_bonus = 0
+        if llm_candidates:
+            for cand in llm_candidates:
+                item_name = (cand.get("item") or "").lower()
+                section_name = (cand.get("section") or "").lower()
+                conf = float(cand.get("confidence", 0))
+                if conf <= 0:
+                    continue
+                if item_name and item_name == title:
+                    llm_bonus = max(llm_bonus, int(conf * 50))
+                elif section_name and section_name == section_title.lower():
+                    llm_bonus = max(llm_bonus, int(conf * 25))
+
+        score += section_bias_score + llm_bonus
 
         if score > best_score:
             best_score = score
@@ -141,23 +179,24 @@ def _match_roadmap_item_by_text(summary: Optional[str], raw: str) -> Optional[in
     return best_id if best_score >= 8 else None
 
 
-def _summarize_entry_with_groq(entry: Dict[str, Any]) -> Optional[str]:
+def _summarize_entry_with_groq(entry: Dict[str, Any]) -> Tuple[Optional[str], List[Dict[str, Any]]]:
     """
     Use Groq LLM to create a concise learning log summary for a parsed event.
-    Returns the summary text or None on failure.
+    Returns (summary text, roadmap_candidates) where roadmap_candidates is a list of
+    {section, item, confidence} suggested by the LLM. Summary may be None on failure.
     """
     payload = entry.get("summary_payload")
     groq_api_key = os.getenv("GROQ_API_KEY")
     groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
     if not payload or not groq_api_key:
-        return None
+        return None, []
 
     try:
         client = Groq(api_key=groq_api_key)
     except Exception as exc:
         logger.error("Unable to initialize Groq client for webhook summarization: %s", exc)
-        return None
+        return None, []
 
     roadmap_outline = _roadmap_hint()
 
@@ -167,8 +206,8 @@ def _summarize_entry_with_groq(entry: Dict[str, Any]) -> Optional[str]:
         "Do NOT mention repository names, branches, delivery IDs, commit counts, or authors. "
         "Avoid phrases like 'GitHub push' or other transport metadata. "
         "Keep it concise: 1-2 sentences plus 2-4 short bullets, under 120 words total. "
-        "Use the provided roadmap outline to infer the most relevant section/item; if high confidence, add one line like "
-        "'Likely roadmap: <Section> > <Item>'."
+        "Also return the top 2 roadmap candidates using ONLY the section/item names from the provided outline, "
+        "with confidence 0-1."
     )
 
     raw_text = entry.get("content", "")
@@ -183,7 +222,10 @@ def _summarize_entry_with_groq(entry: Dict[str, Any]) -> Optional[str]:
     if roadmap_outline:
         user_prompt_parts.extend(["", "Roadmap outline:", roadmap_outline])
     user_prompt_parts.append("")
-    user_prompt_parts.append("Write the concise learning-focused summary now.")
+    user_prompt_parts.append(
+        "Return JSON with fields: summary (string) and roadmap_candidates (array of {section, item, confidence}). "
+        "Use exact section/item names from the outline."
+    )
     user_prompt = "\n".join(user_prompt_parts)
 
     try:
@@ -196,10 +238,35 @@ def _summarize_entry_with_groq(entry: Dict[str, Any]) -> Optional[str]:
             temperature=0.2,
             max_tokens=400,
         )
-        return response.choices[0].message.content.strip()
+        content = response.choices[0].message.content.strip()
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError:
+            # Try to recover from fenced JSON blocks
+            if "```" in content:
+                fenced = content.split("```")
+                for block in fenced:
+                    block = block.strip()
+                    if block.startswith("{") and block.endswith("}"):
+                        try:
+                            parsed = json.loads(block)
+                            break
+                        except json.JSONDecodeError:
+                            continue
+            else:
+                parsed = None
+
+        if parsed and isinstance(parsed, dict) and "summary" in parsed:
+            summary_text = (parsed.get("summary") or "").strip() or None
+            candidates = parsed.get("roadmap_candidates") or []
+            if not isinstance(candidates, list):
+                candidates = []
+            return summary_text, candidates
+
+        return content, []
     except Exception as exc:
         logger.error("Groq summarization failed for webhook delivery: %s", exc)
-        return None
+        return None, []
 
 
 def _build_content_blocks(
@@ -239,6 +306,38 @@ def _build_content_blocks(
     return display_block, content
 
 
+def _select_item_from_llm_candidates(candidates: List[Dict[str, Any]], confidence_threshold: float = 0.6) -> Optional[int]:
+    """
+    Find the best RoadmapItem id from LLM-proposed candidates when confidence is high enough.
+    """
+    if not candidates:
+        return None
+
+    ordered = sorted(
+        candidates,
+        key=lambda c: float(c.get("confidence", 0) or 0),
+        reverse=True,
+    )
+    for cand in ordered:
+        conf = float(cand.get("confidence", 0) or 0)
+        if conf < confidence_threshold:
+            continue
+        item_name = (cand.get("item") or "").strip().lower()
+        section_name = (cand.get("section") or "").strip().lower()
+
+        qs = RoadmapItem.objects.select_related("section").all()
+        if item_name:
+            qs = qs.filter(title__iexact=item_name)
+        if section_name:
+            qs = qs.filter(section__title__iexact=section_name) if item_name else qs.filter(section__title__iexact=section_name)
+
+        match = qs.first()
+        if match:
+            return match.id
+
+    return None
+
+
 def create_learning_entries_from_events(
     entries: List[Dict[str, Any]],
     delivery_id: Optional[str] = None,
@@ -265,11 +364,20 @@ def create_learning_entries_from_events(
     created: List[int] = []
     with transaction.atomic():
         for entry in entries:
-            ai_summary = _summarize_entry_with_groq(entry)
+            ai_summary, llm_candidates = _summarize_entry_with_groq(entry)
+            file_paths = entry.get("files") or (entry.get("summary_payload") or {}).get("files") or []
+
+            llm_match_id = _select_item_from_llm_candidates(llm_candidates)
 
             # Prefer mapping by Groq summary/raw text; fallback to naive message match
             roadmap_item_id = (
-                _match_roadmap_item_by_text(ai_summary, entry["content"])
+                llm_match_id
+                or _match_roadmap_item_by_text(
+                    ai_summary,
+                    entry["content"],
+                    files=file_paths,
+                    llm_candidates=llm_candidates,
+                )
                 or _guess_roadmap_item_id(messages)
             )
 

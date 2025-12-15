@@ -21,6 +21,7 @@ def parse_push_event(payload: Dict[str, Any], delivery_id: Optional[str] = None)
 
     commit_lines: List[str] = []
     commit_messages: List[str] = []
+    changed_files: List[str] = []
 
     for commit in commits:
         message = (commit.get("message") or "").strip()
@@ -28,6 +29,9 @@ def parse_push_event(payload: Dict[str, Any], delivery_id: Optional[str] = None)
         author = (commit.get("author") or {}).get("name") or "unknown author"
         sha_short = (commit.get("id") or commit.get("sha") or "")[:7]
         url = commit.get("url")
+        for key in ["added", "modified", "removed"]:
+            for path in commit.get(key) or []:
+                changed_files.append(path)
 
         line = f"- {message} (by {author}"
         if sha_short:
@@ -49,6 +53,13 @@ def parse_push_event(payload: Dict[str, Any], delivery_id: Optional[str] = None)
         content_lines.append(f"Compare: {compare_url}")
 
     content_lines.append("")
+    if changed_files:
+        unique_files = sorted(set(changed_files))
+        content_lines.append("")
+        content_lines.append("Files changed:")
+        content_lines.extend(f"- {fp}" for fp in unique_files)
+
+    content_lines.append("")
     content_lines.append("Commits:")
     content_lines.extend(commit_lines)
 
@@ -57,6 +68,7 @@ def parse_push_event(payload: Dict[str, Any], delivery_id: Optional[str] = None)
         "content": "\n".join(content_lines),
         "is_public": True,
         "messages": commit_messages,
+        "files": sorted(set(changed_files)),
         # Extra context for downstream LLM summarization
         "summary_payload": {
             "event_type": "push",
@@ -66,6 +78,7 @@ def parse_push_event(payload: Dict[str, Any], delivery_id: Optional[str] = None)
             "compare_url": compare_url,
             "commit_messages": commit_messages,
             "commit_lines": commit_lines,
+            "files": sorted(set(changed_files)),
         },
     }
 
