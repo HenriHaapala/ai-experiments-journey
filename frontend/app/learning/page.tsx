@@ -80,7 +80,7 @@ export default function LearningPage() {
       {/* Hero Section */}
       <section className="bg-radial-red px-4 py-8 text-center md:p-16">
         <div className="mx-auto max-w-[900px]">
-          <h1 className="text-gradient-red mb-3 text-[2rem] font-black tracking-tight md:mb-4 md:text-[3.5rem]">
+          <h1 className="text-text-light mb-3 text-[2rem] font-black tracking-tight md:mb-4 md:text-[3.5rem]">
             MCP Learning Log
           </h1>
           <p className="mb-4 text-base font-light text-text-gray md:mb-4 md:text-xl">
@@ -97,31 +97,31 @@ export default function LearningPage() {
             </p>
             <ul className="mb-2 space-y-1.5 text-xs text-text-light md:mb-3 md:space-y-2 md:text-sm">
               <li className="flex items-start gap-2">
-                <span className="text-primary-red">▸</span>
+                <span className="text-primary-red red-text-stroke">▸</span>
                 <span>
                   <strong>get_roadmap</strong> - Fetches my AI learning roadmap structure
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-primary-red">▸</span>
+                <span className="text-primary-red red-text-stroke">▸</span>
                 <span>
                   <strong>search_knowledge</strong> - Performs semantic search across all my notes using RAG (Retrieval-Augmented Generation)
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-primary-red">▸</span>
+                <span className="text-primary-red red-text-stroke">▸</span>
                 <span>
                   <strong>add_learning_entry</strong> - Automatically creates new learning log entries
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-primary-red">▸</span>
+                <span className="text-primary-red red-text-stroke">▸</span>
                 <span>
                   <strong>get_learning_entries</strong> - Retrieves my learning history with filters
                 </span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-primary-red">▸</span>
+                <span className="text-primary-red red-text-stroke">▸</span>
                 <span>
                   <strong>get_progress_stats</strong> - Tracks my learning progress metrics
                 </span>
@@ -146,7 +146,7 @@ export default function LearningPage() {
 
         {error && (
           <div className="bg-card rounded-lg border border-primary-red/50 p-8 text-center md:p-12">
-            <p className="text-base text-primary-red md:text-lg">{error}</p>
+            <p className="text-base text-primary-red red-text-stroke md:text-lg">{error}</p>
           </div>
         )}
 
@@ -164,13 +164,13 @@ export default function LearningPage() {
 
               return (
                 <Card key={entry.id}>
-                  <h2 className="mb-2 text-xl font-bold text-primary-red md:mb-3 md:text-[1.75rem]">
+                  <h2 className="mb-2 text-xl font-bold red-text-stroke text-primary-red md:mb-3 md:text-[1.75rem]">
                     {entry.title}
                   </h2>
 
                   {(entry.section_title || entry.roadmap_item_title) && (
                     <div className="mb-3 flex items-center gap-2 text-sm text-text-gray md:mb-4 md:text-[0.95rem]">
-                      <span className="text-primary-red">▸</span>
+                      <span className="text-primary-red red-text-stroke">▸</span>
                       {entry.section_title && <span>{entry.section_title}</span>}
                       {entry.section_title && entry.roadmap_item_title && <span>→</span>}
                       {entry.roadmap_item_title && <span>{entry.roadmap_item_title}</span>}
@@ -187,7 +187,7 @@ export default function LearningPage() {
 
                   {entry.media.length > 0 && (
                     <div className="mb-3 rounded border border-primary-red/20 bg-black/30 p-3 md:mb-4 md:p-4">
-                      <h3 className="mb-3 text-sm font-semibold text-primary-red md:mb-4 md:text-base">
+                      <h3 className="mb-3 text-sm font-semibold red-text-stroke text-primary-red md:mb-4 md:text-base">
                         Media Attachments
                       </h3>
                       <ul className="flex flex-col gap-3 p-0 md:gap-4">

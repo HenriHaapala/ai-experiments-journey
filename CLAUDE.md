@@ -2188,7 +2188,7 @@ refactor everything and also add these 10 other things..."
 - `.bg-radial-red` - Radial gradient with red center
 
 **Tailwind Color Tokens:**
-- `text-primary-red` → #CC0000
+- `text-primary-red` → #740404;
 - `text-light-red` → #FF3333
 - `text-dark-red` → #8B0000
 - `text-text-light` → #E8E8E8

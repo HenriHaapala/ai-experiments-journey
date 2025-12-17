@@ -137,7 +137,7 @@ export default function HomePage() {
               {/* CLASSIFIED Header */}
               <div className="classified-header flex items-start justify-between">
                 <div>
-                  <p className="font-mono text-lg font-bold uppercase tracking-[0.16em] text-primary-red">
+                  <p className="font-mono text-xl font-bold uppercase tracking-[0.16em] text-primary-red">
                     Classified
                   </p>
                   <p className="mt-1 font-mono text-[12px] uppercase tracking-[0.22em] text-[#c35b5b]">

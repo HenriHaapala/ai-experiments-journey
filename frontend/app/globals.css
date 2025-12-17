@@ -12,7 +12,7 @@
   --font-mono: var(--font-geist-mono);
 
   /* Custom color palette */
-  --color-primary-red: #CC0000;
+  --color-primary-red: #740404;
   --color-light-red: #FF3333;
   --color-dark-red: #8B0000;
   --color-text-light: #E8E8E8;
@@ -72,7 +72,11 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .shadow-red-glow {
-    box-shadow: 0 0 60px rgba(150, 50, 50, 0.4);
+    box-shadow: 0 0 60px rgba(255, 0, 0, 0.4);
+  }
+
+  .red-text-stroke {
+    -webkit-text-stroke: 0.2px #000000;
   }
 
   .divider-red {
@@ -108,6 +112,7 @@ h1, h2, h3, h4, h5, h6 {
     position: relative;
     overflow: hidden;
     border: 1px solid #4b333366;
+    border-top: 4px solid #270404;
     background: linear-gradient(140deg, #0f0f10 0%, #080808 45%, #050505 100%);
     box-shadow:
       0 20px 60px rgba(0, 0, 0, 0.65),
@@ -118,7 +123,7 @@ h1, h2, h3, h4, h5, h6 {
     content: "";
     position: absolute;
     inset: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(49, 49, 49, 0.06);
     pointer-events: none;
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
   }
@@ -144,7 +149,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .classified-button {
-    background: linear-gradient(90deg, #7d1717 0%, #b12b2b 50%, #781414 100%);
+    background: linear-gradient(354deg, #7d1717 0%, #730000 50%, #781414 100%);
     border: 1px solid #6b1212;
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.1),

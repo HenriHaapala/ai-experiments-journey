@@ -58,7 +58,7 @@ export default function RoadmapPage() {
       {/* Hero Section */}
       <section className="bg-radial-red px-4 py-8 text-center md:p-16">
         <div className="mx-auto max-w-[900px]">
-          <h1 className="text-gradient-red mb-3 text-[2rem] font-black tracking-tight md:mb-4 md:text-[3.5rem]">
+          <h1 className="text-text-light mb-3 text-[2rem] font-black tracking-tight md:mb-4 md:text-[3.5rem]">
             AI Career Roadmap 2025
           </h1>
           <p className="mb-3 text-base font-light text-text-gray md:mb-4 md:text-xl">
@@ -78,7 +78,7 @@ export default function RoadmapPage() {
 
         {error && (
           <div className="bg-card rounded-lg border border-primary-red/50 p-8 text-center md:p-12">
-            <p className="text-base text-primary-red md:text-lg">{error}</p>
+            <p className="text-base text-primary-red red-text-stroke md:text-lg">{error}</p>
           </div>
         )}
 
@@ -86,7 +86,7 @@ export default function RoadmapPage() {
           <div className="flex flex-col gap-6 md:gap-8">
             {sections.map((section) => (
               <Card key={section.id}>
-                <h2 className="mb-3 text-xl font-bold text-primary-red md:mb-4 md:text-[1.75rem]">
+                <h2 className="mb-3 text-xl font-bold red-text-stroke text-primary-red md:mb-4 md:text-[1.75rem]">
                   {section.order}. {section.title}
                 </h2>
 
@@ -105,7 +105,7 @@ export default function RoadmapPage() {
                         className="list-none rounded border border-primary-red/20 bg-black/30 p-3 transition-colors hover:bg-primary-red/10 md:p-4"
                       >
                         <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-text-light md:mb-2 md:text-base">
-                          <span className="text-primary-red">▸</span>
+                          <span className="text-primary-red red-text-stroke">▸</span>
                           {item.title}
                         </div>
                         {item.description && (
