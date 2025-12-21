@@ -19,6 +19,7 @@ class Command(BaseCommand):
                 "title": "Foundations",
                 "description": "Core understanding of LLMs, prompting, safety, and CS basics.",
                 "order": 1,
+                "status": "DONE",
                 "items": [
                     "Core understanding of LLMs, prompting, safety",
                     "Practical AI use: ChatGPT, Claude, structured outputs",
@@ -29,6 +30,7 @@ class Command(BaseCommand):
                 "title": "Agents + MCP",
                 "description": "MCP installation, multi-agent systems, and AI-controlled automation.",
                 "order": 2,
+                "status": "IN_PROGRESS",
                 "items": [
                     "MCP installation, tools, custom tools",
                     "Multi-agent systems and automation",
@@ -39,6 +41,7 @@ class Command(BaseCommand):
                 "title": "RAG Systems",
                 "description": "Embeddings, vector databases, retrieval pipelines, and document assistants.",
                 "order": 3,
+                "status": "DONE",
                 "items": [
                     "Embeddings, vector DBs, chunking",
                     "Retrieval pipelines, grounding, evaluation",
@@ -49,6 +52,7 @@ class Command(BaseCommand):
                 "title": "Image AI",
                 "description": "Stable Diffusion tools, LoRA training, and model automation.",
                 "order": 4,
+                "status": "NOT_STARTED",
                 "items": [
                     "SD tools, ControlNet, LoRA usage",
                     "LoRA training, DreamBooth, dataset creation",
@@ -59,6 +63,7 @@ class Command(BaseCommand):
                 "title": "LLM Fine-Tuning",
                 "description": "QLoRA, SFT, PEFT techniques for custom model training.",
                 "order": 5,
+                "status": "NOT_STARTED",
                 "items": [
                     "QLoRA, SFT, PEFT, Axolotl",
                     "Persona, domain, coding fine-tunes",
@@ -68,6 +73,7 @@ class Command(BaseCommand):
                 "title": "Training Your Own Models",
                 "description": "Math essentials, transformer internals, and multi-GPU training.",
                 "order": 6,
+                "status": "NOT_STARTED",
                 "items": [
                     "Math essentials: linear algebra, probability",
                     "Transformer internals, tokenizers",
@@ -78,6 +84,7 @@ class Command(BaseCommand):
                 "title": "Deployment & Infrastructure",
                 "description": "FastAPI, model serving, Docker, Kubernetes, and production monitoring.",
                 "order": 7,
+                "status": "DONE",
                 "items": [
                     "FastAPI, VLLM, model serving",
                     "Docker, Kubernetes, cloud GPU hosting",
@@ -88,6 +95,7 @@ class Command(BaseCommand):
                 "title": "Multimodal AI",
                 "description": "Speech, TTS, Whisper, video diffusion, and multimodal LLMs.",
                 "order": 8,
+                "status": "NOT_STARTED",
                 "items": [
                     "Speech, TTS, Whisper",
                     "Video diffusion, multimodal LLMs",
@@ -97,6 +105,7 @@ class Command(BaseCommand):
                 "title": "Safety & Evaluation",
                 "description": "Guardrails, bias reduction, benchmarks, and evaluation methods.",
                 "order": 9,
+                "status": "IN_PROGRESS",
                 "items": [
                     "Guardrails, bias reduction",
                     "Benchmarks and evaluation methods",
@@ -106,6 +115,7 @@ class Command(BaseCommand):
                 "title": "Product & Career",
                 "description": "Turning AI into products, portfolio building, and interview prep.",
                 "order": 10,
+                "status": "DONE",
                 "items": [
                     "Turning AI into products",
                     "Portfolio building, interviews",
@@ -140,13 +150,14 @@ class Command(BaseCommand):
                 # Create a meaningful description by combining section context with item
                 item_description = f"{section_data['description']} Specifically: {item_title}"
 
-                item, item_created = RoadmapItem.objects.get_or_create(
+                item, item_created = RoadmapItem.objects.update_or_create(
                     section=section,
                     title=item_title,
                     defaults={
                         "order": idx,
                         "is_active": True,
                         "description": item_description,
+                        "status": section_data.get("status", "NOT_STARTED"),
                     },
                 )
 

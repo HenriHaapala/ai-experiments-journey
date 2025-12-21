@@ -12,6 +12,7 @@ type RoadmapItem = {
   description: string;
   order: number;
   is_active: boolean;
+  status: "NOT_STARTED" | "IN_PROGRESS" | "DONE";
 };
 
 type RoadmapSection = {
@@ -50,6 +51,30 @@ export default function RoadmapPage() {
 
     load();
   }, []);
+
+  const getStatusIcon = (status: RoadmapItem["status"]) => {
+    switch (status) {
+      case "DONE":
+        return <span className="text-green-500 font-bold">✓</span>;
+      case "IN_PROGRESS":
+        return <span className="text-yellow-500">🚧</span>;
+      case "NOT_STARTED":
+      default:
+        return <span className="text-gray-600">○</span>;
+    }
+  };
+
+  const getStatusColor = (status: RoadmapItem["status"]) => {
+    switch (status) {
+      case "DONE":
+        return "border-green-500/30 bg-green-500/5 hover:bg-green-500/10";
+      case "IN_PROGRESS":
+        return "border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10";
+      case "NOT_STARTED":
+      default:
+        return "border-primary-red/20 bg-black/30 hover:bg-primary-red/10";
+    }
+  }
 
   return (
     <PageWrapper>
@@ -102,10 +127,12 @@ export default function RoadmapPage() {
                     .map((item) => (
                       <li
                         key={item.id}
-                        className="list-none rounded border border-primary-red/20 bg-black/30 p-3 transition-colors hover:bg-primary-red/10 md:p-4"
+                        className={`list-none rounded border p-3 transition-colors md:p-4 ${getStatusColor(item.status)}`}
                       >
-                        <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-text-light md:mb-2 md:text-base">
-                          <span className="text-primary-red red-text-strokeF">▸</span>
+                        <div className="mb-1 flex items-center gap-3 text-sm font-semibold text-text-light md:mb-2 md:text-base">
+                          <span className="flex items-center justify-center w-6 h-6">
+                            {getStatusIcon(item.status)}
+                          </span>
                           {item.title}
                         </div>
                         {item.description && (

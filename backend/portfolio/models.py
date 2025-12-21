@@ -15,6 +15,11 @@ class RoadmapSection(models.Model):
 
 
 class RoadmapItem(models.Model):
+    class Status(models.TextChoices):
+        NOT_STARTED = "NOT_STARTED", "Not Started"
+        IN_PROGRESS = "IN_PROGRESS", "In Progress"
+        DONE = "DONE", "Done"
+
     section = models.ForeignKey(
         RoadmapSection,
         on_delete=models.CASCADE,
@@ -24,6 +29,11 @@ class RoadmapItem(models.Model):
     description = models.TextField(blank=True)
     order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.NOT_STARTED,
+    )
 
     class Meta:
         ordering = ["section", "order", "id"]

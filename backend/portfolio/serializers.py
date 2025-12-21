@@ -5,7 +5,7 @@ from .models import RoadmapSection, RoadmapItem, LearningEntry, Media
 class RoadmapItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = RoadmapItem
-        fields = ["id", "title", "description", "order", "is_active"]
+        fields = ["id", "title", "description", "order", "is_active", "status"]
 
 
 class RoadmapSectionSerializer(serializers.ModelSerializer):
