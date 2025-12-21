@@ -5,6 +5,7 @@ import { useEffect, useState, FormEvent } from "react";
 import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";
 import PageWrapper from "./components/layout/PageWrapper";
+import ArchitectBackground from "./components/ArchitectBackground";
 
 type ContextChunk = {
   id: number;
@@ -96,7 +97,8 @@ export default function HomePage() {
       <Navigation />
 
       {/* Hero Section with Chatbot */}
-      <section className="mx-auto max-w-[1400px] px-4 py-12 md:px-8 md:py-24">
+      <section className="relative mx-auto max-w-[1400px] px-4 py-12 md:px-8 md:py-24">
+        <ArchitectBackground />
         <div className="grid-responsive-900 items-stretch gap-8 md:gap-16">
           {/* Left: Name and Title */}
           <div className="flex flex-col justify-center">
@@ -106,13 +108,13 @@ export default function HomePage() {
             </p>
 
             {/* Large Serif Heading */}
-            <h1 className="mb-6 font-serif text-[3.5rem] font-light leading-[1.05] tracking-tight md:text-[5rem] lg:text-[6rem]">
-              <span className="text-[#B8B8B8]">The</span>
+            <h1 className="mb-6 font-serif text-[4.5rem] font-light leading-[1] tracking-tight md:text-[6rem] lg:text-[7rem]">
+              <span className="text-[#888888] font-normal italic">The</span>
               <br />
               <span className="font-normal text-text-light">Architect</span>
             </h1>
 
-            <p className="mb-8 max-w-md text-base leading-relaxed text-text-gray md:text-lg">
+            <p className="mb-8 max-w-md text-lg leading-relaxed text-text-gray md:text-xl font-light">
               Building intelligent systems in the shadows. Specializing in RAG, vector databases, and the unseen logic of AI applications.
             </p>
 
@@ -147,8 +149,8 @@ export default function HomePage() {
                     "Ask me anything about the subject's work, known associates, or technical capabilities..."
                   </p>
                 </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#2d0f0f] bg-[#0c0808] shadow-[0_0_0_1px_rgba(255,0,0,0.08),0_10px_30px_rgba(0,0,0,0.6)]">
-                  <span className="h-2 w-2 rounded-full bg-primary-red shadow-[0_0_0_4px_rgba(204,0,0,0.2)]" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#2d0f0f] bg-[#0c0808] shadow-[0_0_15px_rgba(139,0,0,0.4)]">
+                  <span className="h-2 w-2 rounded-full bg-primary-red shadow-[0_0_10px_2px_rgba(255,0,0,0.5)] animate-pulse" />
                 </div>
               </div>
 

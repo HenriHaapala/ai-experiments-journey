@@ -105,7 +105,7 @@ export default function RoadmapPage() {
                         className="list-none rounded border border-primary-red/20 bg-black/30 p-3 transition-colors hover:bg-primary-red/10 md:p-4"
                       >
                         <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-text-light md:mb-2 md:text-base">
-                          <span className="text-primary-red red-text-stroke">▸</span>
+                          <span className="text-primary-red red-text-strokeF">▸</span>
                           {item.title}
                         </div>
                         {item.description && (
