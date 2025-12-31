@@ -52,6 +52,11 @@ def _section_bias_tokens() -> Dict[str, List[str]]:
             "tokens": ["rag", "retrieval", "embedding", "embeddings", "vector", "chunk", "chunks", "chunking", "pgvector", "similarity", "index"],
             "paths": ["vector", "embedding", "rag", "search", "knowledge"],
         },
+        "safety": {
+            "section_keywords": ["safety", "security", "guardrail", "audit", "evaluation", "bias"],
+            "tokens": ["security", "guardrail", "guardrails", "audit", "safety", "jailbreak", "attack", "defense", "bias", "eval", "evaluation"],
+            "paths": ["security", "audit", "guardrail", "safety", "tests/security"],
+        },
     }
 
 
