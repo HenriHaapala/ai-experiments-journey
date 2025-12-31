@@ -22,4 +22,6 @@ aiohttp==3.11.11
 python-dotenv==1.2.1
 
 # Logging and utilities
-python-json-logger==3.2.1
+
+# Security
+guardrails-ai

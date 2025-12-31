@@ -7,6 +7,7 @@ from .views import (
     RAGSearchView,
     LearningEntryListCreateView,
 )
+from .views_security import LogSecurityEventView
 
 urlpatterns = [
     path("roadmap/sections/", RoadmapSectionListView.as_view(), name="roadmap-sections"),
@@ -19,4 +20,5 @@ urlpatterns = [
     ),
     path("ai/chat/", AIChatView.as_view(), name="ai-chat"),
     path("rag/search/", RAGSearchView.as_view(), name="rag-search"),
+    path("security/audit/", LogSecurityEventView.as_view(), name="security-audit-log"),
 ]

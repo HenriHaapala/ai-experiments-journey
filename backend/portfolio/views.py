@@ -207,6 +207,46 @@ class AIChatView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # ---------------------------------------------------------------
+        # SECURITY: Call Agent Service Guardrails
+        # ---------------------------------------------------------------
+        try:
+            import requests
+            # Use docker service name 'agent' and port 8001
+            agent_url = os.getenv("AGENT_URL", "http://agent:8001")
+            
+            # 1. Validate Input
+            validation_resp = requests.post(
+                f"{agent_url}/api/validate", 
+                json={"text": question},
+                timeout=3
+            )
+            
+            if validation_resp.status_code == 200:
+                val_data = validation_resp.json()
+                if not val_data.get("is_safe", True):
+                    # Blocking Unsafe Content
+                    reason = val_data.get("reason", "Security Violation")
+                    return Response(
+                        {
+                            "answer": f"**SECURITY ALERT**: Request blocked. {reason}",
+                            "question": question,
+                            "context_used": [],
+                            "confidence": 0.0,
+                            "retrieval_debug": {"status": "blocked"},
+                            "follow_up_questions": []
+                        },
+                        status=status.HTTP_200_OK
+                    )
+        except Exception as e:
+            # If agent is down, we might default to fail-open or fail-closed.
+            # For this test, let's log and proceed, OR fail-closed if strict.
+            print(f"Warning: Agent guardrail check failed: {e}")
+            # Proceeding (Fail-Open) for robustness, or return error?
+            # Let's simple print warning.
+            pass
+        # ---------------------------------------------------------------
+
         # Setup clients
         cohere_api_key = os.getenv("COHERE_API_KEY")
         groq_api_key = os.getenv("GROQ_API_KEY")

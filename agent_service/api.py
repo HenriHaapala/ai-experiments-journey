@@ -130,6 +130,54 @@ async def chat(request: ChatRequest):
         logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Agent error: {str(e)}")
 
+# Validation Endpoint
+class ValidationRequest(BaseModel):
+    text: str
+
+class ValidationResponse(BaseModel):
+    is_safe: bool
+    reason: str
+
+@app.post("/api/validate", response_model=ValidationResponse)
+async def validate_prompt(request: ValidationRequest):
+    """
+    Validate input text against security rules.
+    """
+    from guardrails_config import validate_input
+    from agent import get_agent
+    
+    # Use the same validation logic as the agent
+    is_safe, reason = validate_input(request.text)
+    
+    if not is_safe:
+        # We should also log this here since the backend is asking
+        try:
+            # We can use the agent instance to reuse logging logic if we refactor,
+            # but for now let's just log it directly or assume the caller handles strict logging if needed.
+            # actually, let's log it here to ensure "Agent Service" is doing the work.
+            import requests
+            # Log to Backend Security Audit (recursion? No, backend called us, we call backend logs)
+            # To avoid potential loop complexity or double logging, we'll just return the decision 
+            # and let the caller (Backend) or this service log it.
+            # User requirement: "Agent Service Integration... log violations". 
+            # So WE should log it.
+            backend_url = os.getenv("BACKEND_URL", "http://backend:8000")
+            requests.post(
+                f"{backend_url}/api/security/audit/",
+                json={
+                    "source": "Agent Service (Validation API)",
+                    "input_content": request.text,
+                    "violation_type": "jailbreak", 
+                    "action_taken": "blocked",
+                    "metadata": {"reason": reason}
+                },
+                timeout=5
+            )
+        except Exception as e:
+            logger.error(f"Failed to audit log violation: {e}")
+
+    return ValidationResponse(is_safe=is_safe, reason=reason)
+
 # Direct tool execution endpoint
 @app.post("/api/tools/execute", response_model=ToolExecutionResponse)
 async def execute_tool(request: ToolExecutionRequest):
