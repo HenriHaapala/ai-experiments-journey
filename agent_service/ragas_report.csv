@@ -1,0 +1,4 @@
+user_input,retrieved_contexts,response,reference,faithfulness,answer_relevancy,context_precision
+What technology is used for the backend?,"['The project consists of a Django REST backend...', 'Backend: Django + Django REST Framework']",The backend is built using Django and Django REST Framework.,Django and Django REST Framework are used for the backend.,,0.6540289143519761,
+How is the frontend deployed?,['Frontend (/frontend): Next.js 16.0.5... Deployment: Fully Dockerized'],The frontend is a Next.js application deployed in a Docker container.,The frontend uses Next.js and is containerized with Docker.,,0.7338728878219054,0.9999999999
+What vector database is used?,['Database: PostgreSQL with pgvector extension... Vector Embeddings: Cohere'],The project uses PostgreSQL with the pgvector extension.,PostgreSQL with pgvector is used for the vector database.,,0.4922542570925947,0.9999999999

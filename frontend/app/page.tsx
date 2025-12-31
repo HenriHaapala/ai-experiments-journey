@@ -6,6 +6,7 @@ import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";
 import PageWrapper from "./components/layout/PageWrapper";
 import ArchitectBackground from "./components/ArchitectBackground";
+import NeuralHealthWidget from "./components/NeuralHealthWidget";
 
 type ContextChunk = {
   id: number;
@@ -254,9 +255,12 @@ export default function HomePage() {
                 <span>Secure Connection</span>
                 <span>Clearance: L3</span>
               </div>
+
+              <NeuralHealthWidget />
             </div>
           </div>
         </div>
+
       </section>
 
       {/* Case Files Section */}
@@ -331,6 +335,6 @@ export default function HomePage() {
       </section>
 
       <Footer />
-    </PageWrapper>
+    </PageWrapper >
   );
 }

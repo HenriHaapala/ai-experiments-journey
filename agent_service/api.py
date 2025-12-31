@@ -245,6 +245,83 @@ async def list_tools():
         ]
     }
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+class MetricsResponse(BaseModel):
+    faithfulness: float
+    answer_relevancy: float
+    context_precision: float
+    timestamp: str
+
+@app.get("/metrics", response_model=MetricsResponse)
+async def get_metrics():
+    """
+    Get current AI health metrics (Ragas scores)
+    
+    Reads from the latest evaluation report (ragas_report.csv)
+    """
+    import csv
+    import statistics
+    
+    report_path = "ragas_report.csv"
+    
+    # Default values if no report exists
+    metrics = {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.0
+    }
+    
+    if not os.path.exists(report_path):
+        return MetricsResponse(
+            **metrics,
+            timestamp=datetime.utcnow().isoformat()
+        )
+        
+    try:
+        # Accumulators
+        faithfulness_scores = []
+        answer_relevancy_scores = []
+        context_precision_scores = []
+        
+        with open(report_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                # Helper to parse float safely
+                def parse_score(val):
+                    try:
+                        return float(val) if val and val.strip() != "" else None
+                    except ValueError:
+                        return None
+                
+                f_score = parse_score(row.get("faithfulness"))
+                a_score = parse_score(row.get("answer_relevancy"))
+                c_score = parse_score(row.get("context_precision"))
+                
+                if f_score is not None:
+                    faithfulness_scores.append(f_score)
+                if a_score is not None:
+                    answer_relevancy_scores.append(a_score)
+                if c_score is not None:
+                    context_precision_scores.append(c_score)
+        
+        # Calculate averages if data exists
+        if faithfulness_scores:
+            metrics["faithfulness"] = statistics.mean(faithfulness_scores)
+        if answer_relevancy_scores:
+            metrics["answer_relevancy"] = statistics.mean(answer_relevancy_scores)
+        if context_precision_scores:
+            metrics["context_precision"] = statistics.mean(context_precision_scores)
+            
+        return MetricsResponse(
+            **metrics,
+            timestamp=datetime.utcfromtimestamp(os.path.getmtime(report_path)).isoformat()
+        )
+        
+    except Exception as e:
+        logger.error(f"Error reading metrics: {e}")
+        # Return zeros on error
+        return MetricsResponse(
+            faithfulness=0.0,
+            answer_relevancy=0.0,
+            context_precision=0.0,
+            timestamp=datetime.utcnow().isoformat()
+        )

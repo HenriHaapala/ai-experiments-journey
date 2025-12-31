@@ -86,18 +86,22 @@
     - **Audio Briefings**: One-click "Generate Daily Briefing" that reads out the latest roadmap updates.
 
 ## 9. SAFETY & EVALUATION
-- **Status**: ✅ **DONE** (Phase 1)
+- **Status**: ✅ **DONE**
 - **Current Implementation**:
     - `SecurityAudit` model and Admin logging.
     - Agent Guardrails (`guardrails-ai` + custom validators) to block jailbreaks.
     - `bandit`, `safety` for static analysis.
+    - **Advanced Eval frameworks**: `ragas` implemented in Agent service with `evaluate_rag.py`.
+    - **Metrics UI**: Neural Health Widget displaying RAG scores.
 - **Remaining Todos**:
-    - Advanced Eval frameworks (Ragas, DeepEval).
     - Complex PII detection models.
 - **How to Implement**:
-    - Add `ragas` to backend for RAG quality evaluation.
+    - Expand `evaluate_rag.py` to run against real production data during CI/CD.
+    - **API**: ✅ `GET /agent/metrics` exposed Ragas scores.
+    - **UI**: ✅ `NeuralHealthWidget` added to `page.tsx` footer (below "Secure Connection") to display these metrics.
 - **Showcase**:
     - "Security Audit" log in the admin panel showing blocked unsafe prompts.
+    - **"Neural Health" Widget**: ✅ A cyberpunk-style status box on the landing page (below the chat) showing real-time AI accuracy scores.
 
 ## 10. PRODUCT & CAREER
 - **Status**: ✅ **DONE** (Ongoing)
