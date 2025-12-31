@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import RoadmapSection, RoadmapItem, LearningEntry, Media
+from .models import RoadmapSection, RoadmapItem, LearningEntry, Media, SecurityAudit
 
 
 class RoadmapItemSerializer(serializers.ModelSerializer):
@@ -45,3 +45,10 @@ class LearningEntrySerializer(serializers.ModelSerializer):
             "section_title",
             "media",
         ]
+
+
+class SecurityAuditSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SecurityAudit
+        fields = ["id", "timestamp", "source", "input_content", "violation_type", "action_taken", "metadata"]
+        read_only_fields = ["timestamp"]

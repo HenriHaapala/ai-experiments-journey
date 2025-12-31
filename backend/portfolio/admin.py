@@ -10,6 +10,7 @@ from .models import (
     SiteContent,
     DocumentUpload,
     KnowledgeChunk,
+    SecurityAudit,
 )
 from .forms import DocumentUploadForm
 from .utils.text_extraction import extract_text_from_upload
@@ -113,3 +114,17 @@ class DocumentUploadAdmin(admin.ModelAdmin):
                 )
 
             KnowledgeChunk.objects.bulk_create(kc_list)
+
+
+@admin.register(SecurityAudit)
+class SecurityAuditAdmin(admin.ModelAdmin):
+    list_display = ("timestamp", "source", "violation_type", "action_taken")
+    list_filter = ("violation_type", "action_taken", "source")
+    search_fields = ("input_content", "metadata")
+    readonly_fields = ("timestamp", "source", "input_content", "violation_type", "action_taken", "metadata")
+
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False

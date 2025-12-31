@@ -195,6 +195,7 @@ export default function LearningPage() {
                           <li key={m.id} className="list-none">
                             {m.media_type === "image" ? (
                               <div>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                   src={m.url}
                                   alt={m.caption || "Media attachment"}

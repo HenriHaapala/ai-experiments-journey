@@ -178,3 +178,40 @@ class DocumentUpload(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class SecurityAudit(models.Model):
+    class ViolationType(models.TextChoices):
+        JAILBREAK = "jailbreak", "Jailbreak Attempt"
+        TOXICITY = "toxicity", "Toxic Content"
+        PROMPT_INJECTION = "prompt_injection", "Prompt Injection"
+        PII_LEAK = "pii_leak", "PII Leakage"
+        UNKNOWN = "unknown", "Unknown"
+
+    class ActionTaken(models.TextChoices):
+        BLOCKED = "blocked", "Blocked"
+        FLAGGED = "flagged", "Flagged"
+        NONE = "none", "None"
+
+    timestamp = models.DateTimeField(auto_now_add=True)
+    source = models.CharField(max_length=50, default="Agent")
+    input_content = models.TextField(help_text="The prompt or input that triggered the violation")
+    violation_type = models.CharField(
+        max_length=50,
+        choices=ViolationType.choices,
+        default=ViolationType.UNKNOWN,
+    )
+    action_taken = models.CharField(
+        max_length=50,
+        choices=ActionTaken.choices,
+        default=ActionTaken.BLOCKED,
+    )
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-timestamp"]
+        verbose_name = "Security Audit Log"
+        verbose_name_plural = "Security Audit Logs"
+
+    def __str__(self):
+        return f"[{self.violation_type}] {self.source} @ {self.timestamp}"

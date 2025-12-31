@@ -40,7 +40,7 @@ export default function HomePage() {
         if (!res.ok) throw new Error("Bad response");
         const data = await res.json();
         setBackendStatus(data.status || "ok");
-      } catch (e) {
+      } catch {
         setBackendStatus("error");
       }
     };
@@ -146,7 +146,7 @@ export default function HomePage() {
                     AI Assistant Interface
                   </p>
                   <p className="mt-3 font-serif text-sm italic text-text-gray">
-                    "Ask me anything about the subject's work, known associates, or technical capabilities..."
+                    &quot;Ask me anything about the subject&apos;s work, known associates, or technical capabilities...&quot;
                   </p>
                 </div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#2d0f0f] bg-[#0c0808] shadow-[0_0_15px_rgba(139,0,0,0.4)]">

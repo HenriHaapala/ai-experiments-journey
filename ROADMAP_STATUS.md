@@ -86,16 +86,16 @@
     - **Audio Briefings**: One-click "Generate Daily Briefing" that reads out the latest roadmap updates.
 
 ## 9. SAFETY & EVALUATION
-- **Status**: 🚧 **PARTIAL**
+- **Status**: ✅ **DONE** (Phase 1)
 - **Current Implementation**:
+    - `SecurityAudit` model and Admin logging.
+    - Agent Guardrails (`guardrails-ai` + custom validators) to block jailbreaks.
     - `bandit`, `safety` for static analysis.
-    - Basic error handling.
 - **Remaining Todos**:
-    - LLM Guardrails (NVIDIA Guardrails or similar).
-    - Eval frameworks (Ragas, DeepEval).
+    - Advanced Eval frameworks (Ragas, DeepEval).
+    - Complex PII detection models.
 - **How to Implement**:
-    - Add `guardrails-ai` or similar middleware.
-    - Add a test suite specifically for "Jailbreak attempts".
+    - Add `ragas` to backend for RAG quality evaluation.
 - **Showcase**:
     - "Security Audit" log in the admin panel showing blocked unsafe prompts.
 

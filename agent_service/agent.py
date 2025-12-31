@@ -15,6 +15,9 @@ from dotenv import load_dotenv
 from mcp_tools import create_langchain_tools, MCPToolExecutor
 from memory import ConversationMemory, get_memory
 from prompts import SYSTEM_PROMPT
+from guardrails_config import validate_input
+import requests
+import json
 
 # Load environment variables
 load_dotenv()
@@ -144,6 +147,43 @@ Thought: {agent_scratchpad}
         """
         try:
             logger.info(f"Processing message: {message[:100]}...")
+
+            # ------------------------------------------------------------------
+            # SECURITY: Guardrails Input Validation
+            # ------------------------------------------------------------------
+            is_safe, violation_reason = validate_input(message)
+            if not is_safe:
+                logger.warning(f"Security violation detected: {violation_reason}")
+                
+                # Log to Backend Security Audit
+                try:
+                    backend_url = os.getenv("BACKEND_URL", "http://backend:8000")
+                    response = requests.post(
+                        f"{backend_url}/api/security/audit/",
+                        json={
+                            "source": "Agent",
+                            "input_content": message,
+                            "violation_type": "jailbreak", # Simplified for demo
+                            "action_taken": "blocked",
+                            "metadata": {"reason": violation_reason}
+                        },
+                        timeout=5
+                    )
+                    response.raise_for_status()
+                except Exception as log_err:
+                    error_details = ""
+                    if hasattr(log_err, "response") and log_err.response is not None:
+                         error_details = f" - Response: {log_err.response.text}"
+                    logger.error(f"Failed to log security event: {log_err}{error_details}")
+                    raise log_err
+
+                return {
+                    "success": True,
+                    "response": f"I cannot answer that request. Security violation detected: {violation_reason}",
+                    "conversation_id": conversation_id,
+                    "metadata": {"blocked": True}
+                }
+            # ------------------------------------------------------------------
 
             # Get conversation context if available
             context = ""
