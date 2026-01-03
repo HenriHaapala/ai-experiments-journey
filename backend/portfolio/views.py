@@ -276,6 +276,21 @@ class AIChatView(APIView):
             )
             query_vector = embed_resp.embeddings[0]
         except Exception as e:
+            # Handle Cohere Rate Limit (429) specifically
+            if "429" in str(e) or (hasattr(e, 'status_code') and e.status_code == 429):
+                print(f"Cohere Rate Limit Hit: {e}")
+                return Response(
+                    {
+                        "answer": "My AI brain is temporarily slightly overwhelmed (Rate Limit). Please try again in a few moments!",
+                        "question": question,
+                        "context_used": [],
+                        "confidence": 0.0,
+                        "retrieval_debug": {"status": "rate_limit"},
+                        "follow_up_questions": []
+                    },
+                    status=status.HTTP_200_OK
+                )
+            
             return Response(
                 {"error": f"Failed to embed question with Cohere: {e}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
