@@ -25,12 +25,16 @@ def generate_embedding(text: str) -> list[float]:
     client = cohere.Client(api_key=api_key)
     text = text.strip()[:8000]  # Limit length
 
-    resp = client.embed(
-        texts=[text],
-        model=model_name,
-        input_type="search_query",
-    )
-    return resp.embeddings[0]
+    try:
+        resp = client.embed(
+            texts=[text],
+            model=model_name,
+            input_type="search_query",
+        )
+        return resp.embeddings[0]
+    except Exception as e:
+        print(f"[MCP] Embedding failed (Rate Limit?): {e}")
+        return None
 
 
 def handle_get_roadmap(arguments: dict) -> dict:
@@ -105,6 +109,13 @@ def handle_search_knowledge(arguments: dict) -> dict:
     
     # Generate query embedding
     query_vector = generate_embedding(query)
+    
+    if query_vector is None:
+        return {
+            "success": False,
+            "error": "Embedding generation failed (likely Rate Limit). Please try again later.",
+            "results": []
+        }
     
     # Perform vector similarity search (distance -> lower is better, so we negate for ordering)
     chunks = KnowledgeChunk.objects.annotate(
