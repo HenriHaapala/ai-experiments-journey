@@ -11,6 +11,7 @@
 - Understand the technology stack (Groq + Cohere, NOT OpenAI) before making changes
 - Follow the testing strategy and CI/CD pipeline documented below
 - **IF A COMMAND TAKES TOO LONG (> 2 minutes):** STOP IT IMMEDIATELY and ask the user for feedback. Do not "think" indefinitely.
+- **FAIL-SAFE DESIGN PRINCIPLE:** External APIs (Cohere, Groq) WILL fail (Rate Limits, 503s). Apps MUST handle these failures gracefully (e.g., Fallback Mode, Skip RAG) and provide a degraded but functional experience. NEVER allow a single external error to crash the entire application (500 Error).
 
 **If you don't read this file first, you WILL make mistakes.**
 
