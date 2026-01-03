@@ -267,6 +267,9 @@ class AIChatView(APIView):
         co_client = cohere.Client(cohere_api_key)
         groq_client = Groq(api_key=groq_api_key)
 
+        rate_limited = False
+        query_vector = None
+
         # 1) Embed the question with Cohere
         try:
             embed_resp = co_client.embed(
@@ -276,61 +279,57 @@ class AIChatView(APIView):
             )
             query_vector = embed_resp.embeddings[0]
         except Exception as e:
-            # Handle Cohere Rate Limit (429) specifically
-            if "429" in str(e) or (hasattr(e, 'status_code') and e.status_code == 429):
-                print(f"Cohere Rate Limit Hit: {e}")
-                return Response(
-                    {
-                        "answer": "My AI brain is temporarily slightly overwhelmed (Rate Limit). Please try again in a few moments!",
-                        "question": question,
-                        "context_used": [],
-                        "confidence": 0.0,
-                        "retrieval_debug": {"status": "rate_limit"},
-                        "follow_up_questions": []
-                    },
-                    status=status.HTTP_200_OK
-                )
-            
-            return Response(
-                {"error": f"Failed to embed question with Cohere: {e}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            # Handle Cohere Rate Limit (429) specifically: Fallback to simple generic chat
+            # Do NOT crash or stop. Just proceed without RAG.
+            print(f"Cohere Rate Limit Hit (or other error): {e}. Proceeding with running on LLM only (no context).")
+            query_vector = None
+            rate_limited = True
+            debug = {"status": "rate_limit_fallback"}
 
         # 2) Similarity search via robust smart_retrieve
         # You can later pass source_types / document_id if needed
-        try:
-            chunks_qs, debug = smart_retrieve(
-                query_vector,
-                top_k=5,
-                candidate_k=16,
-                # source_types=None,
-                # document_id=None,
-            )
-
-            if debug["status"] == "no_results":
-                # Generate follow-up questions even when no results found
-                follow_up_questions = self._generate_follow_up_questions(
-                    question, [], groq_client, groq_model
+        # 2) Similarity search via robust smart_retrieve
+        # You can later pass source_types / document_id if needed
+        if query_vector is not None:
+            try:
+                chunks_qs, debug = smart_retrieve(
+                    query_vector,
+                    top_k=5,
+                    candidate_k=16,
+                    # source_types=None,
+                    # document_id=None,
                 )
 
-                return Response(
-                    {
-                        "answer": "En löytänyt mitään tähän kysymykseen nykyisestä tietokannasta.",
-                        "question": question,
-                        "context_used": [],
-                        "confidence": 0.0,
-                        "retrieval_debug": debug,
-                        "follow_up_questions": follow_up_questions,
-                    },
-                    status=status.HTTP_200_OK,
-                )
+                if debug["status"] == "no_results":
+                    # Generate follow-up questions even when no results found
+                    follow_up_questions = self._generate_follow_up_questions(
+                        question, [], groq_client, groq_model
+                    )
 
-            low_conf = debug["status"] in ("low_confidence", "very_low_confidence")
-        except Exception as e:
-            return Response(
-                {"error": f"Failed to query pgvector: {e}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+                    return Response(
+                        {
+                            "answer": "En löytänyt mitään tähän kysymykseen nykyisestä tietokannasta.",
+                            "question": question,
+                            "context_used": [],
+                            "confidence": 0.0,
+                            "retrieval_debug": debug,
+                            "follow_up_questions": follow_up_questions,
+                        },
+                        status=status.HTTP_200_OK,
+                    )
+
+                low_conf = debug["status"] in ("low_confidence", "very_low_confidence")
+            except Exception as e:
+                 # If PGVector fails, also fallback
+                 print(f"PGVector failed: {e}. Fallback to LLM.")
+                 chunks_qs = []
+                 debug = {"status": "db_error_fallback"}
+                 low_conf = True
+        else:
+             # Rate limit fallback path
+             chunks_qs = []
+             # Debug was already set above
+             low_conf = True
 
         context_blocks = []
         for chunk in chunks_qs:
@@ -377,7 +376,15 @@ class AIChatView(APIView):
             "that it is based on limited context.\n"
         )
 
-        if low_conf:
+        if rate_limited:
+             system_prompt += (
+                "\n**SYSTEM NOTICE**: The retrieval system is temporarily unavailable (Rate Limit). "
+                "You CANNOT access Henri's specific logs or roadmap right now. "
+                "If the user asks a general question, answer it. "
+                "If they ask about Henri specifically, politely explain that your access to his specific data is temporarily paused, "
+                "but you can try to answer based on what you might know or ask them to try again in a minute.\n"
+            )
+        elif low_conf:
             system_prompt += (
                 "\nThe retrieval system reports **LOW CONFIDENCE** for this question. "
                 "This means the similarity between the question and the retrieved chunks is weak.\n"
