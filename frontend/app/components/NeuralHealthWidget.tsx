@@ -18,7 +18,7 @@ export default function NeuralHealthWidget() {
         const fetchMetrics = async () => {
             try {
                 // Use local proxy/API route which handles the docker networking
-                const res = await fetch("/api/agent/metrics");
+                const res = await fetch("/proxy/agent/metrics");
                 if (res.ok) {
                     const data = await res.json();
                     setMetrics(data);
