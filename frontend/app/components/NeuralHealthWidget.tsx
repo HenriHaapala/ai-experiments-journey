@@ -17,8 +17,8 @@ export default function NeuralHealthWidget() {
     useEffect(() => {
         const fetchMetrics = async () => {
             try {
-                // Try localhost:8001 directly (standard docker mapping)
-                const res = await fetch("http://localhost:8001/metrics");
+                // Use local proxy/API route which handles the docker networking
+                const res = await fetch("/api/agent/metrics");
                 if (res.ok) {
                     const data = await res.json();
                     setMetrics(data);
