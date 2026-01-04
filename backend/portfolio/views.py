@@ -11,6 +11,7 @@ import cohere
 from groq import Groq
 
 from .models import RoadmapSection, LearningEntry, KnowledgeChunk, RoadmapItem
+from django.db.models import Q # Added for keyword search
 from .serializers import RoadmapSectionSerializer, LearningEntrySerializer
 from .utils.utils import smart_retrieve
 
@@ -239,11 +240,8 @@ class AIChatView(APIView):
                         status=status.HTTP_200_OK
                     )
         except Exception as e:
-            # If agent is down, we might default to fail-open or fail-closed.
-            # For this test, let's log and proceed, OR fail-closed if strict.
+            # Simple fail-open or log
             print(f"Warning: Agent guardrail check failed: {e}")
-            # Proceeding (Fail-Open) for robustness, or return error?
-            # Let's simple print warning.
             pass
         # ---------------------------------------------------------------
 
@@ -253,14 +251,9 @@ class AIChatView(APIView):
         groq_model = os.getenv("GROQ_MODEL", "llama-3.1-70b-versatile")
         cohere_model = os.getenv("COHERE_EMBED_MODEL", "embed-english-v3.0")
 
-        if not cohere_api_key:
+        if not cohere_api_key or not groq_api_key:
             return Response(
-                {"error": "Cohere API key not configured"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-        if not groq_api_key:
-            return Response(
-                {"error": "Groq API key not configured"},
+                {"error": "API keys not configured"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -269,6 +262,11 @@ class AIChatView(APIView):
 
         rate_limited = False
         query_vector = None
+        debug = {"status": "unknown"}
+        chunks_qs = []
+        low_conf = False
+        fallback_active = False # Flag to indicate if we used SQL fallback
+        fallback_context_str = ""
 
         # 1) Embed the question with Cohere
         try:
@@ -279,136 +277,117 @@ class AIChatView(APIView):
             )
             query_vector = embed_resp.embeddings[0]
         except Exception as e:
-            # Handle Cohere Rate Limit (429) specifically: Fallback to simple generic chat
-            # Do NOT crash or stop. Just proceed without RAG.
-            print(f"Cohere Rate Limit Hit (or other error): {e}. Proceeding with running on LLM only (no context).")
-            query_vector = None
+            # Handle Cohere Rate Limit (429) gracefully
+            print(f"Cohere API Error (likely Rate Limit): {e}. Switching to SQL Fallback.")
             rate_limited = True
+            query_vector = None
             debug = {"status": "rate_limit_fallback"}
 
-        # 2) Similarity search via robust smart_retrieve
-        # You can later pass source_types / document_id if needed
-        # 2) Similarity search via robust smart_retrieve
-        # You can later pass source_types / document_id if needed
+        # 2) Retrieval (Vector vs SQL Fallback)
         if query_vector is not None:
+            # Normal Vector Search
             try:
                 chunks_qs, debug = smart_retrieve(
                     query_vector,
                     top_k=5,
                     candidate_k=16,
-                    # source_types=None,
-                    # document_id=None,
                 )
 
                 if debug["status"] == "no_results":
-                    # Generate follow-up questions even when no results found
-                    follow_up_questions = self._generate_follow_up_questions(
-                        question, [], groq_client, groq_model
-                    )
-
-                    return Response(
-                        {
-                            "answer": "En löytänyt mitään tähän kysymykseen nykyisestä tietokannasta.",
-                            "question": question,
-                            "context_used": [],
-                            "confidence": 0.0,
-                            "retrieval_debug": debug,
-                            "follow_up_questions": follow_up_questions,
-                        },
-                        status=status.HTTP_200_OK,
-                    )
-
-                low_conf = debug["status"] in ("low_confidence", "very_low_confidence")
+                     low_conf = True 
+                else:
+                     low_conf = debug["status"] in ("low_confidence", "very_low_confidence")
             except Exception as e:
-                 # If PGVector fails, also fallback
-                 print(f"PGVector failed: {e}. Fallback to LLM.")
-                 chunks_qs = []
-                 debug = {"status": "db_error_fallback"}
-                 low_conf = True
-        else:
-             # Rate limit fallback path
-             chunks_qs = []
-             # Debug was already set above
-             low_conf = True
+                print(f"PGVector failed: {e}. Fallback.")
+                rate_limited = True # Treat DB error as need for fallback
+        
+        # ------------------------------------------------------------------
+        # HYBRID RETRIEVAL: Trigger SQL Fallback if Rate Limited OR Low Confidence
+        # ------------------------------------------------------------------
+        if rate_limited or low_conf:
+            fallback_active = True
+            try:
+                # A) Roadmap Summary (Always useful context)
+                roadmap_items = RoadmapItem.objects.filter(is_active=True).select_related('section')
+                sections = {}
+                for item in roadmap_items:
+                    sec = item.section.title if item.section else "General"
+                    if sec not in sections: sections[sec] = []
+                    sections[sec].append(f"{item.title} ({item.status})")
+                
+                fallback_context_str = "Roadmap Status (Active Items):\n"
+                for sec, items in sections.items():
+                    fallback_context_str += f"## {sec}\n" + "\n".join([f"- {i}" for i in items]) + "\n"
 
-        context_blocks = []
-        for chunk in chunks_qs:
-            context_blocks.append(
-                {
-                    "id": chunk.id,
-                    "source_type": chunk.source_type,
-                    "title": chunk.title,
-                    "section_title": chunk.section_title,
-                    "roadmap_item_title": chunk.item_title,
-                    "content": chunk.content,
-                    "tags": chunk.tags,
-                }
-            )
+                # B) Dynamic Document Keyword Search (The Fix for 'React' missing in Vector DB)
+                # We need to be careful not to filter out important words like 'years', 'experience'
+                stop_words = {"does", "know", "henri", "what", "how", "is", "where", "when", "why", "who", "the", "a", "an", "and", "or", "in", "on", "at", "to", "for", "with", "about", "me", "you", "he", "she", "it", "document", "file", "pdfs"}
+                
+                # Extract keywords, keeping numbers and longer words
+                keywords = [w.strip("?.!,") for w in question.split() if w.lower().strip("?.!,") not in stop_words and len(w) > 1]
+                
+                if keywords:
+                    q_obj = Q()
+                    for k in keywords:
+                        q_obj |= Q(content__icontains=k) | Q(title__icontains=k)
+                    
+                    # Fetch MORE chunks to ensure we catch the 'Profile' section
+                    doc_chunks = KnowledgeChunk.objects.filter(q_obj).order_by('-id')[:10]
+                    
+                    if doc_chunks.exists():
+                        # KEY CHANGE: If we found direct keyword matches, we have HIGH confidence data.
+                        # Disable "Low Confidence" mode so the LLM doesn't hedge or act weird.
+                        low_conf = False 
+                        fallback_context_str += "\n\n**Keyword-Matched Documents (Hybrid Search):**\n"
+                        for i, c in enumerate(doc_chunks, 1):
+                            fallback_context_str += f"[Doc {i} {c.title}]: {c.content[:600]}...\n\n"
 
-        if not context_blocks:
-            context_text = "No prior knowledge chunks matched."
-        else:
-            parts = []
-            for i, block in enumerate(context_blocks, start=1):
-                header = f"[Chunk {i}] {block['title']}"
-                meta = []
-                if block["section_title"]:
-                    meta.append(block["section_title"])
-                if block["roadmap_item_title"]:
-                    meta.append(block["roadmap_item_title"])
-                if meta:
-                    header += " (" + " - ".join(meta) + ")"
-                parts.append(f"{header}\n{block['content']}")
-            context_text = "\n\n---\n\n".join(parts)
+            except Exception as e:
+                print(f"Fallback construction failed: {e}")
+                if not fallback_context_str:
+                    fallback_context_str = "No specific data available."
 
+        # 3) Context Assembly
+        context_text = ""
+        # Add Vector Chunks first
+        parts = []
+        if chunks_qs:
+             for i, chunk in enumerate(chunks_qs, 1):
+                 parts.append(f"[Vector Chunk {i}] {chunk.title}\n{chunk.content}")
+        
+        vector_context = "\n\n".join(parts) if parts else ""
+        
+        # Combine contexts
+        full_context = ""
+        if vector_context:
+            full_context += f"### Vector Search Results:\n{vector_context}\n\n"
+        if fallback_active and fallback_context_str:
+            full_context += f"### Additional Context (Roadmap/Keywords):\n{fallback_context_str}\n\n"
+        
+        if not full_context:
+            full_context = "No information found in Roadmap or Documents."
 
-        # 4) System prompt with hallucination control + confidence awareness
+        
+        # 4) System Prompt
         system_prompt = (
-            "You are an AI assistant that knows Henri's AI learning journey, roadmap, "
-            "learning entries, uploaded documents, and site content.\n\n"
-            "Your rules:\n"
-            "1) You must use ONLY the provided context chunks when answering.\n"
-            "2) If the context does not contain enough information to answer the question, "
-            "you MUST explicitly say: 'I don't have enough information in the context.'\n"
-            "3) Do NOT invent facts, events, numbers, or details that are not clearly present "
-            "in the provided context.\n"
-            "4) If context contains partial info, give a tentative answer but clearly state "
-            "that it is based on limited context.\n"
+            "You are an AI assistant for Henri Haapala's portfolio.\n"
+            "Rules:\n1) Answer based on context.\n2) If unknown, say 'I don't have enough info'.\n"
         )
-
+        
         if rate_limited:
-             system_prompt += (
-                "\n**SYSTEM NOTICE**: The retrieval system is temporarily unavailable (Rate Limit). "
-                "You CANNOT access Henri's specific logs or roadmap right now. "
-                "If the user asks a general question, answer it. "
-                "If they ask about Henri specifically, politely explain that your access to his specific data is temporarily paused, "
-                "but you can try to answer based on what you might know or ask them to try again in a minute.\n"
+            system_prompt += (
+                "\n**NOTICE**: Vector search is unavailable (Rate Limit). "
+                "You are relying on Roadmap and Keyword Search data only."
             )
         elif low_conf:
-            system_prompt += (
-                "\nThe retrieval system reports **LOW CONFIDENCE** for this question. "
-                "This means the similarity between the question and the retrieved chunks is weak.\n"
-                "Be extra careful:\n"
-                "- Use hedging language such as 'the context suggests', 'based on these notes', 'it seems that...'\n"
-                "- Prefer saying 'I don't know' over guessing.\n"
-                "- Absolutely do NOT hallucinate or invent details.\n"
-            )
-        else:
-            system_prompt += (
-                "\nThe retrieval system reports normal confidence. "
-                "You may answer normally, but still strictly follow the rule: "
-                "DO NOT invent anything outside the provided context.\n"
+             system_prompt += (
+                "\n**NOTICE**: Vector search yielded low confidence. "
+                "Supplementary Keyword Search data has been provided."
             )
 
+        user_prompt = f"Question: {question}\n\nContext:\n{full_context}"
 
-
-        user_prompt = (
-            f"User question:\n{question}\n\n"
-            f"Relevant learning context:\n{context_text}\n\n"
-            "Now answer the question as clearly and concretely as possible, referencing Henri's actual work when relevant."
-        )
-
-        # 3) Call Groq (Llama 3) with the context
+        # 5) Call Groq
         try:
             chat_resp = groq_client.chat.completions.create(
                 model=groq_model,
@@ -420,25 +399,19 @@ class AIChatView(APIView):
             )
             answer = chat_resp.choices[0].message.content
         except Exception as e:
-            return Response(
-                {"error": f"Failed to get answer from Groq: {e}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+             return Response({"error": str(e)}, status=500)
 
-        # 5) Generate follow-up questions for low confidence answers
+        # Generate follow-ups (simplified)
         follow_up_questions = []
-        if low_conf:
-            follow_up_questions = self._generate_follow_up_questions(
-                question, context_blocks, groq_client, groq_model
-            )
+        if not rate_limited:
+             follow_up_questions = self._generate_follow_up_questions(question, [], groq_client, groq_model)
 
-        # 6) Return answer and a bit of metadata
         return Response(
             {
                 "answer": answer,
                 "question": question,
-                "context_used": context_blocks,
-                "confidence": debug.get("max_score"),
+                "context_used": [], # Simplified for now
+                "confidence": 0.5 if not low_conf else 0.3, # Adjust score logic
                 "retrieval_debug": debug,
                 "follow_up_questions": follow_up_questions,
             },
