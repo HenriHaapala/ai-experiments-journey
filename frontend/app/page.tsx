@@ -19,6 +19,7 @@ type ContextChunk = {
 };
 
 type ChatMessage = {
+  id?: string;
   role: "user" | "assistant";
   content: string;
   confidence?: number | null;
@@ -52,8 +53,12 @@ export default function HomePage() {
     e.preventDefault();
     if (!question.trim()) return;
 
-    const userMessage: ChatMessage = { role: "user", content: question };
-    setMessages((prev) => [...prev, userMessage]);
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: "user",
+      content: question
+    };
+    setMessages((prev) => [userMessage, ...prev]);
     setLoading(true);
     setError(null);
 
@@ -71,6 +76,7 @@ export default function HomePage() {
 
       const data = await res.json();
       const assistantMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
         role: "assistant",
         content: data.answer,
         confidence: data.confidence ?? null,
@@ -79,7 +85,7 @@ export default function HomePage() {
         followUpQuestions: data.follow_up_questions || [],
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [assistantMessage, ...prev]);
       setQuestion("");
     } catch (err: any) {
       console.error(err);
@@ -170,7 +176,7 @@ export default function HomePage() {
                       );
 
                       return (
-                        <div key={idx} className="rounded-sm bg-black/40 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+                        <div key={msg.id || idx} className="rounded-sm bg-black/40 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
                           {isAssistant && isLowConfidence && (
                             <div className="mb-2 border border-[#f2c14f]/40 bg-[#f2c14f]/10 px-3 py-2 font-mono text-[11px] uppercase text-[#f2c14f]">
                               Low confidence response
