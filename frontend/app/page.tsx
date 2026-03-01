@@ -7,6 +7,7 @@ import Footer from "./components/layout/Footer";
 import PageWrapper from "./components/layout/PageWrapper";
 import ArchitectBackground from "./components/ArchitectBackground";
 import NeuralHealthWidget from "./components/NeuralHealthWidget";
+/* import GlowingRibbons from "./components/GlowingRibbons"; */
 
 type ContextChunk = {
   id: number;
@@ -101,6 +102,7 @@ export default function HomePage() {
 
   return (
     <PageWrapper>
+      {/* <GlowingRibbons /> */}
       <Navigation />
 
       {/* Hero Section with Chatbot */}
