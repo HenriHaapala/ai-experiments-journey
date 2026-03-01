@@ -162,7 +162,7 @@ export default function HomePage() {
               </div>
 
               {/* Chat Messages */}
-              <div className="mt-6 rounded-sm border border-[#1c0e0e] bg-[#070707]/80 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+              <div className="mt-6 rounded-sm border border-[#1c0e0e] bg-[#100404]/80 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                 {messages.length === 0 ? (
                   <div className="h-10" />
                 ) : (
@@ -219,7 +219,7 @@ export default function HomePage() {
                 <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.16em] text-text-gray">
                   Interrogate the database
                 </div>
-                <div className="flex items-center gap-3 rounded-sm border border-[#1a1a1a] bg-[#0b0b0b] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-1px_0_rgba(0,0,0,0.6)] focus-within:border-[#b12b2b] focus-within:shadow-[0_0_0_1px_rgba(177,43,43,0.4),inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-1px_0_rgba(0,0,0,0.6)]">
+                <div className="flex items-center gap-3 rounded-sm border border-[#1a1a1a] bg-[#030001] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-1px_0_rgba(0,0,0,0.6)] focus-within:border-[#b12b2b] focus-within:shadow-[0_0_0_1px_rgba(177,43,43,0.4),inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-1px_0_rgba(0,0,0,0.6)]">
                   <svg
                     aria-hidden="true"
                     className="h-4 w-4 text-text-gray"
